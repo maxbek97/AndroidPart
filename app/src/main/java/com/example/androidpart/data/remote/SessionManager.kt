@@ -1,18 +1,20 @@
 package com.example.androidpart.data.remote
 
-object SessionManager {
+import android.content.Context
 
-    private var accessToken: String? = null
+class SessionManager(context: Context) {
+
+    private val prefs = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
 
     fun saveToken(token: String) {
-        accessToken = token
+        prefs.edit().putString("access_token", token).apply()
     }
 
-    fun getToken(): String? = accessToken
+    fun getToken(): String? = prefs.getString("access_token", null)
 
     fun clear() {
-        accessToken = null
+        prefs.edit().remove("access_token").apply()
     }
 
-    fun isAuthorized(): Boolean = accessToken != null
+    fun isAuthorized(): Boolean = getToken() != null
 }

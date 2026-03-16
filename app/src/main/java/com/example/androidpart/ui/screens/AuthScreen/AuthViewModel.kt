@@ -11,11 +11,20 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 class AuthViewModel(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val sessionManager: SessionManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<AuthUiState>(AuthUiState.Idle)
     val uiState: StateFlow<AuthUiState> = _uiState
+
+    fun checkAuthorization() {
+        if (sessionManager.isAuthorized()) {
+            _uiState.value = AuthUiState.LoginSuccess
+        } else {
+            _uiState.value = AuthUiState.Idle
+        }
+    }
 
     fun register(
         login: String,
@@ -49,14 +58,19 @@ class AuthViewModel(
     ) {
 
         viewModelScope.launch {
-
+            if (email == "test@local" && password == "12345") {
+                // Сразу считаем пользователя авторизованным
+                sessionManager.saveToken("FAKE_TOKEN_FOR_TESTING")
+                _uiState.value = AuthUiState.LoginSuccess
+                return@launch
+            }
             _uiState.value = AuthUiState.Loading
 
             authRepository.login(LoginRequest(email, password))
                 .onSuccess { response ->
 
                     // сохраняем accessToken
-                    SessionManager.saveToken(response.accessToken)
+                    sessionManager.saveToken(response.accessToken)
 
                     _uiState.value = AuthUiState.LoginSuccess
                 }

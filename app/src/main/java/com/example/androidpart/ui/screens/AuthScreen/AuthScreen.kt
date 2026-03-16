@@ -22,8 +22,10 @@ import com.example.androidpart.data.remote.AuthRepository
 import com.example.androidpart.data.remote.RetrofitClient
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.zIndex
 import androidx.navigation.NavHostController
+import com.example.androidpart.data.remote.SessionManager
 
 
 @Composable
@@ -32,7 +34,9 @@ fun AuthScreen(navController: NavHostController) {
     // 1. **ПОДГОТОВКА ViewModel**
 
     // **Создаем необходимые зависимости (Репозиторий)**
-    val repository = remember { AuthRepository(RetrofitClient.apiService) }
+    val context = LocalContext.current
+    val sessionManager = SessionManager(context)
+    val repository = AuthRepository.create(sessionManager)
 
     // **Создаем ViewModel, используя фабрику для передачи repository**
     val viewModel: AuthViewModel = viewModel(
@@ -40,7 +44,7 @@ fun AuthScreen(navController: NavHostController) {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 if (modelClass.isAssignableFrom(AuthViewModel::class.java)) {
                     @Suppress("UNCHECKED_CAST")
-                    return AuthViewModel(repository) as T
+                    return AuthViewModel(repository, sessionManager) as T
                 }
                 throw IllegalArgumentException("Unknown ViewModel class")
             }
@@ -53,9 +57,6 @@ fun AuthScreen(navController: NavHostController) {
     var isError by remember { mutableStateOf(false) }
     var isTopMessageVisible by remember { mutableStateOf(false) }
 
-    // **Собираем состояние из ViewModel (AuthState)**
-    val authState by viewModel.uiState.collectAsState()
-
     var isLogin by remember { mutableStateOf(true) }
 
     var email by remember { mutableStateOf("") }
@@ -66,6 +67,7 @@ fun AuthScreen(navController: NavHostController) {
     val emailFocus = remember { FocusRequester() }
     val passwordFocus = remember { FocusRequester() }
     val loginFocus = remember { FocusRequester() }
+
 
     Box(
         modifier = Modifier
@@ -224,11 +226,11 @@ fun AuthScreen(navController: NavHostController) {
                         viewModel.register(login, password, email)
                     }
                 },
-                enabled = authState != AuthUiState.Loading,
+                enabled = uiState != AuthUiState.Loading,
                 modifier = Modifier.fillMaxWidth(0.7f),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3F51B5))
             ) {
-                if (authState == AuthUiState.Loading) {
+                if (uiState == AuthUiState.Loading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
                         strokeWidth = 3.dp,
@@ -242,8 +244,8 @@ fun AuthScreen(navController: NavHostController) {
                 }
             }
             // 3. **ОБРАБОТКА СОСТОЯНИЯ UI (ОШИБКИ/УСПЕХ)**
-            LaunchedEffect(authState) {
-                when (val state = authState) {
+            LaunchedEffect(uiState) {
+                when (val state = uiState) {
                     is AuthUiState.Error -> {
                         topMessage = state.message
                         isError = true
@@ -254,6 +256,9 @@ fun AuthScreen(navController: NavHostController) {
                         topMessage = "С возвращением!"
                         isError = false
                         isTopMessageVisible = true
+                        navController.navigate("menu") {
+                            popUpTo("auth") { inclusive = true }
+                        }
                     }
 
                     is AuthUiState.RegistrationSuccess -> {

@@ -6,6 +6,12 @@ class AuthRepository(
     private val api: ApiService
 ) {
 
+    companion object {
+        fun create(sessionManager: SessionManager): AuthRepository {
+            val apiService = RetrofitClient.getApiService(sessionManager)
+            return AuthRepository(apiService)
+        }
+    }
     // Регистрация: возвращает Result<String> (сообщение об успехе/ошибке)
     suspend fun register(dto: RegisterRequest): Result<String> =
         try {
