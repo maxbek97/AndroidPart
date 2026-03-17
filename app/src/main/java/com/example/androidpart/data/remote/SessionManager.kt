@@ -12,7 +12,7 @@ class SessionManager(context: Context) {
 
     fun getToken(): String? = prefs.getString("access_token", null)
 
-    fun clear() {
+    fun clearSession() {
         prefs.edit().remove("access_token").apply()
     }
 
