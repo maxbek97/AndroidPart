@@ -22,12 +22,15 @@ import com.example.androidpart.data.remote.AuthRepository
 import com.example.androidpart.data.remote.RetrofitClient
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.zIndex
 import androidx.navigation.NavHostController
 import com.example.androidpart.data.remote.SessionManager
 
-
+@androidx.media3.common.util.UnstableApi
 @Composable
 fun AuthScreen(navController: NavHostController) {
 
@@ -75,6 +78,14 @@ fun AuthScreen(navController: NavHostController) {
             .background(Color(0xFF111845))
     ) {
 
+        VideoBackground()
+
+        // затемнение
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.55f))
+        )
 
         TopMessageBar(
             message = topMessage,
@@ -91,7 +102,7 @@ fun AuthScreen(navController: NavHostController) {
                 .fillMaxSize()
                 .padding(top = 40.dp, start = 16.dp, end = 16.dp)
                 .zIndex(1f),
-            verticalArrangement = Arrangement.Top
+            verticalArrangement = Arrangement.Center
         ) {
 
             // ---------- АНИМАЦИЯ ПОКАЗА/СКРЫТИЯ ЛОГОТИПА ----------
@@ -100,15 +111,24 @@ fun AuthScreen(navController: NavHostController) {
                 enter = fadeIn(tween(300)) + slideInVertically { -80 },
                 exit = fadeOut(tween(300)) + slideOutVertically { -80 }
             ) {
-//                Image(
-//                    painter = painterResource(R.drawable.logo),
-//                    contentDescription = null,
-//                    modifier = Modifier
-//                        .size(140.dp)
-//                        .padding(bottom = 20.dp)
-//                )
-            }
 
+            }
+            Text(
+                text = "IVANVISION",
+                fontSize = 56.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 2.sp,
+                lineHeight = 52.sp,
+                color = Color.White,
+                modifier = Modifier.padding(bottom = 32.dp),
+                style = TextStyle(
+                    shadow = Shadow(
+                        color = Color.Black.copy(alpha = 0.8f),
+                        offset = Offset(4f, 4f),
+                        blurRadius = 48f
+                    )
+                )
+            )
             // ---------- КАРТОЧКА ----------
             Surface(
                 modifier = Modifier
@@ -116,7 +136,8 @@ fun AuthScreen(navController: NavHostController) {
                     .fillMaxWidth(0.9f)
                     .animateContentSize(),
                 shape = RoundedCornerShape(20.dp),
-                color = Color.White,
+                color = Color.White.copy(alpha = 0.75f),
+
                 tonalElevation = 6.dp,
                 shadowElevation = 12.dp
             ) {
@@ -145,8 +166,6 @@ fun AuthScreen(navController: NavHostController) {
 
                     Spacer(Modifier.height(20.dp))
 
-                    // ---------- АНИМАЦИЯ МЕЖДУ ФОРМАМИ ----------
-                    // ---------- АНИМАЦИЯ СМЕНЫ ФОРМ ----------
                     AnimatedContent(
                         targetState = isLogin,
                         label = "auth_animation",
@@ -228,7 +247,7 @@ fun AuthScreen(navController: NavHostController) {
                 },
                 enabled = uiState != AuthUiState.Loading,
                 modifier = Modifier.fillMaxWidth(0.7f),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3F51B5))
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3F51B5).copy(alpha = 0.75f))
             ) {
                 if (uiState == AuthUiState.Loading) {
                     CircularProgressIndicator(
