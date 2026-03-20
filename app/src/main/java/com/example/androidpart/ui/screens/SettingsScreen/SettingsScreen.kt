@@ -18,15 +18,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import com.example.androidpart.R
+import com.example.androidpart.data.local.SettingsDataStore
 import com.example.androidpart.ui.components.DropdownSelector
 import com.example.androidpart.ui.components.SettingDescription
+import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsScreen(navController: NavHostController) {
     val context = LocalContext.current
     val sessionManager = remember { SessionManager(context) }
     val metrics = context.resources.displayMetrics
-
+    val settingsDataStore = remember { SettingsDataStore(context) }
+    val scope = rememberCoroutineScope()
     val fpsOptions = listOf(24, 30, 60)
 
     val resolutions = remember {
@@ -38,6 +41,14 @@ fun SettingsScreen(navController: NavHostController) {
 
     var selectedResolution by remember { mutableStateOf(resolutions.first()) }
     var selectedFps by remember { mutableStateOf(fpsOptions.first()) }
+
+    LaunchedEffect(Unit) {
+        settingsDataStore.settingsFlow.collect { (res, fps) ->
+            val resObj = resolutions.find { it.toString() == res}
+            if (resObj != null ) selectedResolution = resObj
+            if (fpsOptions.contains(fps)) selectedFps = fps
+        }
+    }
 
     var showDialog by remember { mutableStateOf(false) }
 
@@ -73,7 +84,13 @@ fun SettingsScreen(navController: NavHostController) {
                 label = "Разрешение",
                 options = resolutions,
                 selected = selectedResolution,
-                onSelected = { selectedResolution = it }
+                onSelected = { newRes ->
+                    selectedResolution = newRes
+                    // Сохраняем через coroutineScope
+                    scope.launch{
+                        settingsDataStore.saveSettings(selectedResolution.toString(), selectedFps)
+                    }
+                }
             )
 
             Spacer(Modifier.height(20.dp))
@@ -87,7 +104,12 @@ fun SettingsScreen(navController: NavHostController) {
                 label = "FPS",
                 options = fpsOptions,
                 selected = selectedFps,
-                onSelected = { selectedFps = it }
+                onSelected = { newFps ->
+                    selectedFps = newFps
+                    scope.launch{
+                        settingsDataStore.saveSettings(selectedResolution.toString(), selectedFps)
+                    }
+                }
             )
         }
 
