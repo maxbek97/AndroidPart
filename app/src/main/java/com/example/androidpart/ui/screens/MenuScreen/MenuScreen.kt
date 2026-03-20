@@ -66,20 +66,10 @@ fun MenuScreen(navController: NavHostController) {
                 label = "Настройки",
                 iconRes = R.drawable.cogwheel_configuration_gear_svgrepo_com,
                 onClick = {
-                    // TODO: Действие при клике "Настройки"
+                    navController.navigate("settings")
                 }
             )
-            MenuButton(
-                label = "Выйти из аккаунта",
-                iconRes = R.drawable.exit_svgrepo_com,
-                onClick = {
-                    sessionManager.clearSession()
 
-                    navController.navigate("auth") {
-                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
-                    }
-                }
-            )
         }
     }
 }

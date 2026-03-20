@@ -1,15 +1,19 @@
 package com.example.androidpart.ui
 
 
+import androidx.annotation.OptIn
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import androidx.media3.common.util.UnstableApi
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.NavHostController
 import com.example.androidpart.data.remote.SessionManager
 import com.example.androidpart.ui.screens.AuthScreen.AuthScreen
 import com.example.androidpart.ui.screens.MenuScreen.MenuScreen
+import com.example.androidpart.ui.screens.SettingsScreen.SettingsScreen
 
+@OptIn(UnstableApi::class)
 @Composable
 fun MainNavGraph(navController: NavHostController) {
 
@@ -27,6 +31,10 @@ fun MainNavGraph(navController: NavHostController) {
 
         composable("menu") {
             MenuScreen(navController)
+        }
+
+        composable("settings") {
+            SettingsScreen(navController)
         }
 //
 //        composable("main_window") {
