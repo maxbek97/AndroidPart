@@ -58,7 +58,7 @@ fun MenuScreen(navController: NavHostController) {
                 label = "Старт",
                 iconRes = R.drawable.qr_code_svgrepo_com,
                 onClick = {
-                    // TODO: Действие при клике "Старт"
+                    navController.navigate("main")
                 }
             )
 

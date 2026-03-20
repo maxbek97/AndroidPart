@@ -12,6 +12,7 @@ import com.example.androidpart.data.remote.SessionManager
 import com.example.androidpart.ui.screens.AuthScreen.AuthScreen
 import com.example.androidpart.ui.screens.MenuScreen.MenuScreen
 import com.example.androidpart.ui.screens.SettingsScreen.SettingsScreen
+import com.example.androidpart.ui.screens.MainScreen.MainScreen
 
 @OptIn(UnstableApi::class)
 @Composable
@@ -36,9 +37,10 @@ fun MainNavGraph(navController: NavHostController) {
         composable("settings") {
             SettingsScreen(navController)
         }
-//
-//        composable("main_window") {
-//            OrganiserHomeScreen(navController)
-//        }
+
+        composable("main") {
+            MainScreen(navController)
+        }
+
     }
 }
