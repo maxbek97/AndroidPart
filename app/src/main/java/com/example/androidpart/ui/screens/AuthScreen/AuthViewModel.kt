@@ -6,23 +6,27 @@ import com.example.androidpart.data.remote.AuthRepository
 import com.example.androidpart.data.remote.SessionManager
 import com.example.androidpart.domain.model.LoginRequest
 import com.example.androidpart.domain.model.RegisterRequest
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 
 class AuthViewModel(
     private val authRepository: AuthRepository,
     private val sessionManager: SessionManager
 ) : ViewModel() {
-
     private val _uiState = MutableStateFlow<AuthUiState>(AuthUiState.Idle)
     val uiState: StateFlow<AuthUiState> = _uiState
 
+    private val _events = MutableSharedFlow<AuthEvent>()
+    val events = _events.asSharedFlow()
+
     fun checkAuthorization() {
         if (sessionManager.isAuthorized()) {
-            _uiState.value = AuthUiState.LoginSuccess
-        } else {
-            _uiState.value = AuthUiState.Idle
+            viewModelScope.launch {
+                _events.emit(AuthEvent.NavigateToMenu)
+            }
         }
     }
 
@@ -45,9 +49,8 @@ class AuthViewModel(
                 .onSuccess {
                     _uiState.value = AuthUiState.RegistrationSuccess
                 }
-                .onFailure {
-                    _uiState.value =
-                        AuthUiState.Error(it.message ?: "Ошибка регистрации")
+                .onFailure { e ->
+                    handleError(e)
                 }
         }
     }
@@ -61,7 +64,7 @@ class AuthViewModel(
             if (email == "test@local" && password == "12345") {
                 // Сразу считаем пользователя авторизованным
                 sessionManager.saveToken("FAKE_TOKEN_FOR_TESTING")
-                _uiState.value = AuthUiState.LoginSuccess
+                _events.emit(AuthEvent.NavigateToMenu)
                 return@launch
             }
             _uiState.value = AuthUiState.Loading
@@ -71,14 +74,28 @@ class AuthViewModel(
 
                     // сохраняем accessToken
                     sessionManager.saveToken(response.accessToken)
-
-                    _uiState.value = AuthUiState.LoginSuccess
+                    _events.emit(AuthEvent.NavigateToMenu)
                 }
-                .onFailure {
-
-                    _uiState.value =
-                        AuthUiState.Error(it.message ?: "Ошибка входа")
+                .onFailure { e ->
+                    handleError(e)
                 }
+        }
+    }
+    // ===== ERROR HANDLER ===== Сюда нужно добавить обработки ошибок,
+    // чтоб нормальный сообщения вызывались
+    private suspend fun handleError(e: Throwable) {
+        val message = e.message ?: "Ошибка"
+
+        _uiState.value = AuthUiState.Idle
+
+        if (
+            message.contains("failed to connect", true) ||
+            message.contains("Unable to resolve host", true) ||
+            message.contains("Connection reset", true)
+        ) {
+            _events.emit(AuthEvent.NavigateToError("Сервер недоступен"))
+        } else {
+            _uiState.value = AuthUiState.Error(message)
         }
     }
 }

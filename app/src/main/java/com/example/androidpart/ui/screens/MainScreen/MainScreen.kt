@@ -24,13 +24,33 @@ import androidx.compose.ui.unit.IntSize
 import androidx.camera.view.PreviewView
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavHostController
-
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 @Composable
 fun MainScreen(navHostController: NavHostController) {
     val context = LocalContext.current
     val activity = context as? Activity
     val lifecycleOwner = LocalLifecycleOwner.current
 
+
+    val hasCameraPermission = remember {
+        ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    LaunchedEffect(Unit) {
+        if (!hasCameraPermission) {
+            navHostController.navigate("error/camera") {
+                popUpTo("main") { inclusive = true }
+            }
+        }
+    }
+
+    // ❗ не даём дальше выполняться
+    if (!hasCameraPermission) return
 
     // Фиксируем горизонтальную ориентацию
     DisposableEffect(Unit) {

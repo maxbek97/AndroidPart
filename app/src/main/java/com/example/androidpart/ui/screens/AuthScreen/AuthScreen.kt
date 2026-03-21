@@ -19,7 +19,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModel
 import com.example.androidpart.data.remote.AuthRepository
-import com.example.androidpart.data.remote.RetrofitClient
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.geometry.Offset
@@ -33,15 +32,10 @@ import com.example.androidpart.data.remote.SessionManager
 @androidx.media3.common.util.UnstableApi
 @Composable
 fun AuthScreen(navController: NavHostController) {
-
-    // 1. **ПОДГОТОВКА ViewModel**
-
-    // **Создаем необходимые зависимости (Репозиторий)**
     val context = LocalContext.current
     val sessionManager = SessionManager(context)
     val repository = AuthRepository.create(sessionManager)
 
-    // **Создаем ViewModel, используя фабрику для передачи repository**
     val viewModel: AuthViewModel = viewModel(
         factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -66,6 +60,9 @@ fun AuthScreen(navController: NavHostController) {
     var password by remember { mutableStateOf("") }
     var login by remember { mutableStateOf("") }
 
+    LaunchedEffect(Unit) {
+        viewModel.checkAuthorization()
+    }
 
     val emailFocus = remember { FocusRequester() }
     val passwordFocus = remember { FocusRequester() }
@@ -263,21 +260,29 @@ fun AuthScreen(navController: NavHostController) {
                 }
             }
             // 3. **ОБРАБОТКА СОСТОЯНИЯ UI (ОШИБКИ/УСПЕХ)**
+            LaunchedEffect(true) {
+                viewModel.events.collect { event ->
+                    when (event) {
+
+                        is AuthEvent.NavigateToMenu -> {
+                            navController.navigate("menu") {
+                                popUpTo("auth") { inclusive = true }
+                            }
+                        }
+
+                        is AuthEvent.NavigateToError -> {
+                            navController.navigate("error/server")
+                        }
+                    }
+                }
+            }
             LaunchedEffect(uiState) {
                 when (val state = uiState) {
+
                     is AuthUiState.Error -> {
                         topMessage = state.message
                         isError = true
                         isTopMessageVisible = true
-                    }
-
-                    is AuthUiState.LoginSuccess -> {
-                        topMessage = "С возвращением!"
-                        isError = false
-                        isTopMessageVisible = true
-                        navController.navigate("menu") {
-                            popUpTo("auth") { inclusive = true }
-                        }
                     }
 
                     is AuthUiState.RegistrationSuccess -> {

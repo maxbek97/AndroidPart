@@ -14,7 +14,6 @@ import com.example.androidpart.ui.screens.ErrorScreen.ErrorScreen
 import com.example.androidpart.ui.screens.MenuScreen.MenuScreen
 import com.example.androidpart.ui.screens.SettingsScreen.SettingsScreen
 import com.example.androidpart.ui.screens.MainScreen.MainScreen
-import com.example.androidpart.ui.screens.ErrorScreen.ErrorScreen
 
 @OptIn(UnstableApi::class)
 @Composable
@@ -24,7 +23,7 @@ fun MainNavGraph(navController: NavHostController) {
     val sessionManager = SessionManager(context)
 
     val startDestination = if (sessionManager.isAuthorized()) "menu" else "auth"
-//    val startDestination = "error"
+//    val startDestination = "error/camera"
     NavHost(
         navController = navController,
         startDestination = startDestination
@@ -45,8 +44,20 @@ fun MainNavGraph(navController: NavHostController) {
             MainScreen(navController)
         }
 
-        composable("error") {
-            ErrorScreen(navController, message = "Требуется разрешение на использование камеры")
+        composable("error/server") {
+            ErrorScreen(
+                navController,
+                title = "Ошибка подключения",
+                message = "Не удалось подключиться к серверу. \nПопробуйте позже."
+            )
+        }
+
+        composable("error/camera") {
+            ErrorScreen(
+                navController,
+                title = "Ошибка разрешений",
+                message = "Приложению нужен доступ к камере для работы VR режима."
+            )
         }
 
     }

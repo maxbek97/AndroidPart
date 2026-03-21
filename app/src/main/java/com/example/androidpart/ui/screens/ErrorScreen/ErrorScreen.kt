@@ -69,7 +69,7 @@ fun ErrorScreen(
             color = Color.White,
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .padding(24.dp)
+                .padding(36.dp)
                 .alpha(appearanceProgress.value) // Проявление
                 .offset(y = (20 * (1 - appearanceProgress.value)).dp) // Небольшой вылет снизу
         )

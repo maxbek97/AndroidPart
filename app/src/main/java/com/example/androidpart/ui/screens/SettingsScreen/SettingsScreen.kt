@@ -64,7 +64,7 @@ fun SettingsScreen(navController: NavHostController) {
             color = Color.White,
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .padding(24.dp)
+                .padding(36.dp)
         )
         // ====== ОСНОВНОЙ КОНТЕНТ ======
         Column(
@@ -119,7 +119,7 @@ fun SettingsScreen(navController: NavHostController) {
             onClick = { showDialog = true },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(horizontal = 24.dp, vertical = 34.dp)
+                .padding(horizontal = 24.dp, vertical = 54.dp)
                 .fillMaxWidth()
                 .height(56.dp)
             ,
@@ -140,7 +140,9 @@ fun SettingsScreen(navController: NavHostController) {
 
             Spacer(Modifier.width(8.dp))
 
-            Text("Выйти из аккаунта")
+            Text(
+                text = "Выйти из аккаунта",
+                fontSize = 20.sp)
         }
 
         // ====== ДИАЛОГ ======
