@@ -10,9 +10,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.NavHostController
 import com.example.androidpart.data.remote.SessionManager
 import com.example.androidpart.ui.screens.AuthScreen.AuthScreen
+import com.example.androidpart.ui.screens.ErrorScreen.ErrorScreen
 import com.example.androidpart.ui.screens.MenuScreen.MenuScreen
 import com.example.androidpart.ui.screens.SettingsScreen.SettingsScreen
 import com.example.androidpart.ui.screens.MainScreen.MainScreen
+import com.example.androidpart.ui.screens.ErrorScreen.ErrorScreen
 
 @OptIn(UnstableApi::class)
 @Composable
@@ -21,10 +23,11 @@ fun MainNavGraph(navController: NavHostController) {
     val context = LocalContext.current
     val sessionManager = SessionManager(context)
 
-    val startDestionation = if (sessionManager.isAuthorized()) "menu" else "auth"
+    val startDestination = if (sessionManager.isAuthorized()) "menu" else "auth"
+//    val startDestination = "error"
     NavHost(
         navController = navController,
-        startDestination = startDestionation
+        startDestination = startDestination
     ) {
         composable("auth") {
             AuthScreen(navController = navController)
@@ -40,6 +43,10 @@ fun MainNavGraph(navController: NavHostController) {
 
         composable("main") {
             MainScreen(navController)
+        }
+
+        composable("error") {
+            ErrorScreen(navController, message = "Требуется разрешение на использование камеры")
         }
 
     }
