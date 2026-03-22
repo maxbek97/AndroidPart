@@ -33,51 +33,53 @@ import androidx.core.view.WindowInsetsControllerCompat
 @Composable
 fun MainScreen(navHostController: NavHostController) {
 
-
     val context = LocalContext.current
     val activity = context as? Activity
     val lifecycleOwner = LocalLifecycleOwner.current
-    var targetSize by remember { mutableStateOf(Size(1080, 1080)) }
-    // 1. Принудительный Fullscreen без отступов
 
+    val targetSize = Size(1080, 1080)
+
+    // FULLSCREEN
     DisposableEffect(Unit) {
         activity?.let {
             it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+
             val window = it.window
             WindowCompat.setDecorFitsSystemWindows(window, false)
+
             val controller = WindowInsetsControllerCompat(window, window.decorView)
             controller.hide(WindowInsetsCompat.Type.systemBars())
-            controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
 
-            // Важно для VR: разрешаем контенту занимать область челки
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 val params = window.attributes
-                params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                params.layoutInDisplayCutoutMode =
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
                 window.attributes = params
             }
         }
-        onDispose { activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED }
-    }
-    SideEffect { // Используем SideEffect для более надежного применения к Window
-        activity?.window?.let { window ->
-            WindowCompat.setDecorFitsSystemWindows(window, false)
-            val controller = WindowInsetsControllerCompat(window, window.decorView)
-            controller.hide(WindowInsetsCompat.Type.systemBars())
-            controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                window.attributes.layoutInDisplayCutoutMode =
-                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
-            }
+        onDispose {
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
     }
 
-    // 2. Создаем PreviewView с фиксированным типом масштабирования
-    val leftEyeView = remember { PreviewView(context).apply { scaleType = PreviewView.ScaleType.FILL_CENTER } }
-    val rightEyeView = remember { PreviewView(context).apply { scaleType = PreviewView.ScaleType.FILL_CENTER } }
+    // Р”Р’Рђ PreviewView
+    val leftView = remember {
+        PreviewView(context).apply {
+            scaleType = PreviewView.ScaleType.FIT_CENTER
+        }
+    }
+
+    val rightView = remember {
+        PreviewView(context).apply {
+            scaleType = PreviewView.ScaleType.FIT_CENTER
+        }
+    }
 
     LaunchedEffect(Unit) {
+
         val cameraProvider = ProcessCameraProvider.getInstance(context).get()
+
         val resolutionSelector = ResolutionSelector.Builder()
             .setResolutionStrategy(
                 ResolutionStrategy(
@@ -87,58 +89,65 @@ fun MainScreen(navHostController: NavHostController) {
             )
             .build()
 
-        // Создаем два UseCase с этим разрешением
         val previewLeft = Preview.Builder()
             .setResolutionSelector(resolutionSelector)
             .build()
-            .also { it.setSurfaceProvider(leftEyeView.surfaceProvider) }
 
         val previewRight = Preview.Builder()
             .setResolutionSelector(resolutionSelector)
             .build()
-            .also { it.setSurfaceProvider(rightEyeView.surfaceProvider) }
+
+        previewLeft.setSurfaceProvider(leftView.surfaceProvider)
+        previewRight.setSurfaceProvider(rightView.surfaceProvider)
 
         try {
             cameraProvider.unbindAll()
+
             cameraProvider.bindToLifecycle(
                 lifecycleOwner,
                 CameraSelector.DEFAULT_BACK_CAMERA,
                 previewLeft,
                 previewRight
             )
-        } catch (e: Exception) { e.printStackTrace() }
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
-    // 3. UI: Математически выверенное разделение
-    Row(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
-            .windowInsetsPadding(WindowInsets(0, 0, 0, 0)) // Полный игнор системных рамок
     ) {
-        // Левая половина экрана
-        Box(
-            modifier = Modifier.weight(1f).fillMaxHeight(),
-            contentAlignment = Alignment.Center
+
+        // 50/50 РєРѕРЅС‚РµРЅС‚
+        Row(
+            modifier = Modifier.fillMaxSize()
         ) {
+
             AndroidView(
-                factory = { leftEyeView },
-                modifier = Modifier.fillMaxSize(0.9f)
+                factory = { leftView },
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+            )
+
+            AndroidView(
+                factory = { rightView },
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
             )
         }
 
-        // Тонкая линия центра
-        Box(modifier = Modifier.width(2.dp).fillMaxHeight().background(Color.Red))
-
-        // Правая половина экрана
+        // рџ”ґ Р¦РµРЅС‚СЂР°Р»СЊРЅР°СЏ Р»РёРЅРёСЏ (РїРѕРІРµСЂС…!)
         Box(
-            modifier = Modifier.weight(1f).fillMaxHeight(),
-            contentAlignment = Alignment.Center
-        ) {
-            AndroidView(
-                factory = { rightEyeView },
-                modifier = Modifier.fillMaxSize(0.9f)
-            )
-        }
+            modifier = Modifier
+                .fillMaxHeight()
+                .width(2.dp)
+                .align(Alignment.Center)
+                .background(Color.Red)
+        )
     }
 }
