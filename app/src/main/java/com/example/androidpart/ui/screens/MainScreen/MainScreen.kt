@@ -3,10 +3,6 @@ package com.example.androidpart.ui.screens.MainScreen
 import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.util.Size
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.Preview
-import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
@@ -15,20 +11,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavHostController
-import android.Manifest
-import android.content.pm.PackageManager
-import androidx.compose.ui.platform.LocalConfiguration
-import android.os.Build
-import android.view.WindowManager
-import androidx.camera.core.resolutionselector.ResolutionSelector
-import androidx.camera.core.resolutionselector.ResolutionStrategy
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
+import com.example.androidpart.ui.components.camera.CameraEyeView
+import com.example.androidpart.ui.components.camera.bindCamera
+import com.example.androidpart.ui.components.camera.rememberCameraPreviewView
 
 @Composable
 fun MainScreen(navHostController: NavHostController) {
@@ -39,80 +26,25 @@ fun MainScreen(navHostController: NavHostController) {
 
     val targetSize = Size(1080, 1080)
 
-    // FULLSCREEN
     DisposableEffect(Unit) {
-        activity?.let {
-            it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-
-            val window = it.window
-            WindowCompat.setDecorFitsSystemWindows(window, false)
-
-            val controller = WindowInsetsControllerCompat(window, window.decorView)
-            controller.hide(WindowInsetsCompat.Type.systemBars())
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                val params = window.attributes
-                params.layoutInDisplayCutoutMode =
-                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
-                window.attributes = params
-            }
-        }
-
+        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         onDispose {
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
     }
 
     // Р”Р’Рђ PreviewView
-    val leftView = remember {
-        PreviewView(context).apply {
-            scaleType = PreviewView.ScaleType.FIT_CENTER
-        }
-    }
-
-    val rightView = remember {
-        PreviewView(context).apply {
-            scaleType = PreviewView.ScaleType.FIT_CENTER
-        }
-    }
+    val leftView = rememberCameraPreviewView(context)
+    val rightView = rememberCameraPreviewView(context)
 
     LaunchedEffect(Unit) {
-
-        val cameraProvider = ProcessCameraProvider.getInstance(context).get()
-
-        val resolutionSelector = ResolutionSelector.Builder()
-            .setResolutionStrategy(
-                ResolutionStrategy(
-                    targetSize,
-                    ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER
-                )
-            )
-            .build()
-
-        val previewLeft = Preview.Builder()
-            .setResolutionSelector(resolutionSelector)
-            .build()
-
-        val previewRight = Preview.Builder()
-            .setResolutionSelector(resolutionSelector)
-            .build()
-
-        previewLeft.setSurfaceProvider(leftView.surfaceProvider)
-        previewRight.setSurfaceProvider(rightView.surfaceProvider)
-
-        try {
-            cameraProvider.unbindAll()
-
-            cameraProvider.bindToLifecycle(
-                lifecycleOwner,
-                CameraSelector.DEFAULT_BACK_CAMERA,
-                previewLeft,
-                previewRight
-            )
-
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        bindCamera(
+            context,
+            lifecycleOwner,
+            leftView,
+            rightView,
+            targetSize
+        )
     }
 
     Box(
@@ -126,22 +58,17 @@ fun MainScreen(navHostController: NavHostController) {
             modifier = Modifier.fillMaxSize()
         ) {
 
-            AndroidView(
-                factory = { leftView },
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
+            CameraEyeView(
+                previewView = leftView,
+                modifier = Modifier.weight(1f)
             )
 
-            AndroidView(
-                factory = { rightView },
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
+            CameraEyeView(
+                previewView = rightView,
+                modifier = Modifier.weight(1f)
             )
         }
 
-        // рџ”ґ Р¦РµРЅС‚СЂР°Р»СЊРЅР°СЏ Р»РёРЅРёСЏ (РїРѕРІРµСЂС…!)
         Box(
             modifier = Modifier
                 .fillMaxHeight()
