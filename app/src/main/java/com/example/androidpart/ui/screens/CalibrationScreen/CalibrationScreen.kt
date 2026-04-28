@@ -27,40 +27,58 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavHostController
+import com.example.androidpart.camera.CameraController
+import com.example.androidpart.ui.screens.CalibrationScreen.calibration.CalibrationManager
+import com.example.androidpart.ui.screens.CalibrationScreen.camera.FrameAnalyzer
+import com.example.androidpart.ui.screens.CalibrationScreen.opencv.ChessboardDetector
+import org.opencv.core.MatOfPoint2f
+import org.opencv.core.Size
+import android.util.Log
+import androidx.compose.runtime.rememberCoroutineScope
+import com.example.androidpart.data.local.SettingsDataStore
+import kotlinx.coroutines.launch
+import org.opencv.core.Mat
 
 @Composable
-fun CalibrationScreen(
-    navController: NavHostController
-) {
+fun CalibrationScreen(navController: NavHostController) {
+
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    val requiredPhotos = 15
-    var photosTaken by remember { mutableStateOf(0) }
-    var chessboardDetected by remember { mutableStateOf(false) }
+    val detector = remember { ChessboardDetector() }
+    val calibrationManager = remember { CalibrationManager() }
+    val cameraController = remember { CameraController() }
 
-    // сюда будем складывать точки
-    val imagePoints = remember { mutableStateListOf<List<Pair<Float, Float>>>() }
+    var detected by remember { mutableStateOf(false) }
+    var currentCorners by remember { mutableStateOf<MatOfPoint2f?>(null) }
+
+    var photosTaken by remember { mutableStateOf(0) }
+    val requiredPhotos = 15
+    val settingsDataStore = remember { SettingsDataStore(context) }
+    val scope = rememberCoroutineScope()
 
     Box(modifier = Modifier.fillMaxSize()) {
 
-        // 📷 Камера
         AndroidView(
             factory = { ctx ->
                 PreviewView(ctx).apply {
-                    setupCamera(
-                        context = ctx,
-                        lifecycleOwner = lifecycleOwner,
-                        onFrame = { detected ->
-                            chessboardDetected = detected
-                        }
+
+                    val analyzer = FrameAnalyzer(detector) { result ->
+                        detected = result.found
+                        currentCorners = result.corners
+                    }
+
+                    cameraController.bind(
+                        ctx,
+                        this,
+                        lifecycleOwner,
+                        analyzer
                     )
                 }
             },
             modifier = Modifier.fillMaxSize()
         )
 
-        // 🧾 Текст сверху
         Text(
             text = getHintText(photosTaken),
             color = Color.White,
@@ -70,7 +88,6 @@ fun CalibrationScreen(
                 .padding(16.dp, vertical = 54.dp)
         )
 
-        // 🔘 Кнопка + прогресс
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -79,7 +96,6 @@ fun CalibrationScreen(
         ) {
 
             val progress = photosTaken / requiredPhotos.toFloat()
-
             CircularProgressIndicator(
                 progress = progress,
                 modifier = Modifier.size(90.dp),
@@ -91,26 +107,60 @@ fun CalibrationScreen(
                 modifier = Modifier
                     .size(70.dp)
                     .clip(CircleShape)
-                    .background(if (chessboardDetected) Color.White else Color.Gray)
+                    .background(if (detected) Color.White else Color.Gray)
                     .clickable {
 
-                        if (!chessboardDetected) return@clickable
+                        if (!detected || currentCorners == null) return@clickable
 
-                        // 👇 сохраняем "кадр"
-                        imagePoints.add(generateFakePoints())
-
+                        calibrationManager.addFrame(currentCorners!!)
                         photosTaken++
 
                         if (photosTaken >= requiredPhotos) {
-                            // 👉 тут будет калибровка
-                            performCalibration(imagePoints)
 
-                            imagePoints.clear()
+                            val (cameraMatrix, distCoeffs) =
+                                calibrationManager.calibrate(Size(640.0, 480.0))
 
+                            logCalibration(cameraMatrix, distCoeffs)
+
+                            scope.launch {
+                                settingsDataStore.saveCalibration(
+                                    matToString(cameraMatrix),
+                                    matToString(distCoeffs)
+                                )
+                            }
+
+                            calibrationManager.clear()
                             navController.popBackStack()
                         }
                     }
             )
         }
     }
+}
+
+
+fun logCalibration(cameraMatrix: Mat, distCoeffs: Mat) {
+
+    Log.d("CALIB", "=== CAMERA MATRIX ===")
+
+    for (i in 0 until cameraMatrix.rows()) {
+        Log.d("CALIB", cameraMatrix.row(i).dump())
+    }
+
+    Log.d("CALIB", "=== DIST COEFFS ===")
+    Log.d("CALIB", distCoeffs.dump())
+}
+
+fun matToString(mat: Mat): String {
+    val sb = StringBuilder()
+
+    for (i in 0 until mat.rows()) {
+        for (j in 0 until mat.cols()) {
+            sb.append(mat.get(i, j)[0])
+            if (j < mat.cols() - 1) sb.append(",")
+        }
+        if (i < mat.rows() - 1) sb.append(";")
+    }
+
+    return sb.toString()
 }

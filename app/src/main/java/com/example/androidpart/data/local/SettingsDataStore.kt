@@ -15,6 +15,8 @@ class SettingsDataStore(private val context: Context) {
         val KEY_RESOLUTION = stringPreferencesKey("resolution")
         val KEY_FPS = intPreferencesKey("fps")
         val KEY_MARKER_SIZE = floatPreferencesKey("markerSize")
+        val KEY_CAMERA_MATRIX = stringPreferencesKey("camera_matrix")
+        val KEY_DIST_COEFFS = stringPreferencesKey("dist_coeffs")
     }
 
     // Сохраняем данные
@@ -23,6 +25,13 @@ class SettingsDataStore(private val context: Context) {
             preferences[KEY_RESOLUTION] = resolution
             preferences[KEY_FPS] = fps
             preferences[KEY_MARKER_SIZE] = markerSize
+        }
+    }
+
+    suspend fun saveCalibration(cameraMatrix: String, distCoeffs: String) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_CAMERA_MATRIX] = cameraMatrix
+            preferences[KEY_DIST_COEFFS] = distCoeffs
         }
     }
 
@@ -35,4 +44,14 @@ class SettingsDataStore(private val context: Context) {
 
             Triple(res, fps, markerSize)
         }
+
+
+    // CALIBRATION FLOW
+    val calibrationFlow: Flow<Pair<String?, String?>> = context.dataStore.data
+        .map { preferences ->
+            val matrix = preferences[KEY_CAMERA_MATRIX]
+            val dist = preferences[KEY_DIST_COEFFS]
+
+            matrix to dist
     }
+}

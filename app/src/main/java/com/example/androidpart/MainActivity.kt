@@ -9,6 +9,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.androidpart.ui.MainNavGraph
 import android.Manifest
 import androidx.activity.result.contract.ActivityResultContracts
+import org.opencv.android.OpenCVLoader
 
 class MainActivity : ComponentActivity() {
 
@@ -34,6 +35,7 @@ class MainActivity : ComponentActivity() {
             MaterialTheme {
                 val navController = rememberNavController()
                 MainNavGraph(navController)
+                OpenCVLoader.initLocal()
             }
         }
     }

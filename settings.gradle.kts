@@ -24,3 +24,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "IvanVision"
 include(":app")
+include(":opencv")
