@@ -69,6 +69,7 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:1.3.2")
     implementation("androidx.camera:camera-view:1.3.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+    implementation("org.opencv:opencv-android:4.8.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
