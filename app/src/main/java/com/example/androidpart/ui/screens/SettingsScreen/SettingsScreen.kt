@@ -2,6 +2,7 @@ package com.example.androidpart.ui.screens.SettingsScreen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -20,7 +21,10 @@ import androidx.compose.ui.res.painterResource
 import com.example.androidpart.R
 import com.example.androidpart.data.local.SettingsDataStore
 import com.example.androidpart.ui.components.DropdownSelector
+import com.example.androidpart.ui.components.MarkerSizeInput
 import com.example.androidpart.ui.components.SettingDescription
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -32,6 +36,7 @@ fun SettingsScreen(navController: NavHostController) {
     val scope = rememberCoroutineScope()
     val fpsOptions = listOf(24, 30, 60)
 
+
     val resolutions = remember {
         getAvailableRes(
             metrics.widthPixels,
@@ -39,42 +44,47 @@ fun SettingsScreen(navController: NavHostController) {
         )
     }
 
+    var markerInput by remember { mutableStateOf("0.05") }
+    var selectedMarkerSize by remember { mutableStateOf(0.05f) } // 5 см по умолчанию
     var selectedResolution by remember { mutableStateOf(resolutions.first()) }
     var selectedFps by remember { mutableStateOf(fpsOptions.first()) }
+    var saveJob by remember { mutableStateOf<Job?>(null) }
 
     LaunchedEffect(Unit) {
-        settingsDataStore.settingsFlow.collect { (res, fps) ->
+        settingsDataStore.settingsFlow.collect { (res, fps, markerSize) ->
             val resObj = resolutions.find { it.toString() == res}
             if (resObj != null ) selectedResolution = resObj
             if (fpsOptions.contains(fps)) selectedFps = fps
+            if (markerSize != selectedMarkerSize) {
+                selectedMarkerSize = markerSize
+                markerInput = markerSize.toString()
+            }
         }
     }
 
     var showDialog by remember { mutableStateOf(false) }
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF111845)),
-        contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = "Настройки",
-            fontSize = 28.sp,
-            color = Color.White,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(36.dp)
-        )
-        // ====== ОСНОВНОЙ КОНТЕНТ ======
+            // ====== ВЕРХ ======
+            Text(
+                text = "Настройки",
+                fontSize = 28.sp,
+                color = Color.White,
+                modifier = Modifier
+                    .padding(36.dp)
+            )
+
+        // ====== Центр ======
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp),
+                .weight(1f)
+                .padding(horizontal = 24.dp),
             verticalArrangement = Arrangement.Center
         ) {
-
-
             // ---------- РАЗРЕШЕНИЕ ----------
             SettingDescription(
                 "Разрешение изображения для одного глаза (VR)"
@@ -88,7 +98,10 @@ fun SettingsScreen(navController: NavHostController) {
                     selectedResolution = newRes
                     // Сохраняем через coroutineScope
                     scope.launch{
-                        settingsDataStore.saveSettings(selectedResolution.toString(), selectedFps)
+                        settingsDataStore.saveSettings(
+                            selectedResolution.toString(),
+                            selectedFps,
+                            selectedMarkerSize)
                     }
                 }
             )
@@ -107,19 +120,90 @@ fun SettingsScreen(navController: NavHostController) {
                 onSelected = { newFps ->
                     selectedFps = newFps
                     scope.launch{
-                        settingsDataStore.saveSettings(selectedResolution.toString(), selectedFps)
+                        settingsDataStore.saveSettings(
+                            selectedResolution.toString(),
+                            selectedFps,
+                            selectedMarkerSize)
                     }
                 }
             )
+
+            Spacer(Modifier.height(20.dp))
+
+            SettingDescription(
+                text = "Размер реального маркера"
+            )
+            MarkerSizeInput(
+                value = markerInput,
+                onValueChange = { value ->
+                    markerInput = value
+
+                    val parsed = value.toFloatOrNull()
+                    if (parsed != null) {
+                        selectedMarkerSize = parsed
+                    }
+                },
+                onFocusLost = { value ->
+                    saveJob?.cancel()
+                    saveJob = scope.launch {
+                        delay(300) // даём UI стабилизироваться
+
+                        val parsed = value.toFloatOrNull()
+                        if (parsed != null) {
+                            settingsDataStore.saveSettings(
+                                selectedResolution.toString(),
+                                selectedFps,
+                                parsed
+                            )
+                        }
+                    }
+                }
+            )
+
         }
 
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+        OutlinedButton(
+            onClick = {
+                navController.navigate("calibration")
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .padding(horizontal = 24.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = Color.White
+            ),
+            border = ButtonDefaults.outlinedButtonBorder.copy(
+                brush = androidx.compose.ui.graphics.SolidColor(Color.White)
+            )
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.calibrate_svgrepo_com),
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(20.dp)
+            )
 
-// ====== КНОПКА ВЫХОДА (НИЗ) ======
+            Spacer(Modifier.width(8.dp))
+
+            Text(
+                text = "Откалибровать камеру",
+                fontSize = 18.sp
+            )
+        }
+
+        // ====== КНОПКА ВЫХОДА (НИЗ) ======
         OutlinedButton(
             onClick = { showDialog = true },
             modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(horizontal = 24.dp, vertical = 54.dp)
+                .padding(horizontal = 24.dp, vertical = 36.dp)
                 .fillMaxWidth()
                 .height(56.dp)
             ,
@@ -143,6 +227,7 @@ fun SettingsScreen(navController: NavHostController) {
             Text(
                 text = "Выйти из аккаунта",
                 fontSize = 20.sp)
+            }
         }
 
         // ====== ДИАЛОГ ======

@@ -14,6 +14,7 @@ import com.example.androidpart.ui.screens.ErrorScreen.ErrorScreen
 import com.example.androidpart.ui.screens.MenuScreen.MenuScreen
 import com.example.androidpart.ui.screens.SettingsScreen.SettingsScreen
 import com.example.androidpart.ui.screens.MainScreen.MainScreen
+import com.example.androidpart.ui.screens.CalibrationScreen.CalibrationScreen
 
 @OptIn(UnstableApi::class)
 @Composable
@@ -58,6 +59,10 @@ fun MainNavGraph(navController: NavHostController) {
                 title = "Ошибка разрешений",
                 message = "Приложению нужен доступ к камере для работы VR режима."
             )
+        }
+
+        composable("calibration") {
+            CalibrationScreen(navController)
         }
 
     }
