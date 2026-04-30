@@ -1,5 +1,6 @@
 package com.example.androidpart.ui.screens.MenuScreen
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -20,12 +21,25 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.androidpart.R
+import com.example.androidpart.data.local.ModelManager
+import com.example.androidpart.data.local.SettingsDataStore
+import com.example.androidpart.data.remote.DetectorRepository
+import com.example.androidpart.data.remote.DetectorRetrofitClient
 import com.example.androidpart.data.remote.SessionManager
 import com.example.androidpart.ui.components.MenuButton
 
 @Composable
 fun MenuScreen(navController: NavHostController) {
     val context = LocalContext.current
+
+    val api = remember { DetectorRetrofitClient.create() }
+    val repo = remember { DetectorRepository(api) }
+    val settings = remember { SettingsDataStore(context) }
+
+    val viewModel = remember {
+        val manager = ModelManager(repo, context, settings)
+        MenuViewModel(manager)
+    }
     val sessionManager = remember { SessionManager(context) }
 
     Box(
@@ -58,7 +72,11 @@ fun MenuScreen(navController: NavHostController) {
                 label = "Старт",
                 iconRes = R.drawable.qr_code_svgrepo_com,
                 onClick = {
-                    navController.navigate("main")
+                    Log.d("MENU", "Нажали СТАРТ")
+
+                    viewModel.onStartClicked {
+                        navController.navigate("main")
+                    }
                 }
             )
 
@@ -70,6 +88,20 @@ fun MenuScreen(navController: NavHostController) {
                 }
             )
 
+        }
+        if (viewModel.isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.7f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator()
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Загружаем модели...", color = Color.White)
+                }
+            }
         }
     }
 }

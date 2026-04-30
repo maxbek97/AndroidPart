@@ -3,12 +3,12 @@ import com.example.androidpart.domain.model.*
 
 // Репозиторий принимает интерфейс ApiService
 class AuthRepository(
-    private val api: ApiService
+    private val api: AuthApiService
 ) {
 
     companion object {
         fun create(sessionManager: SessionManager): AuthRepository {
-            val apiService = RetrofitClient.getApiService(sessionManager)
+            val apiService = AuthRetrofitClient.getApiService(sessionManager)
             return AuthRepository(apiService)
         }
     }

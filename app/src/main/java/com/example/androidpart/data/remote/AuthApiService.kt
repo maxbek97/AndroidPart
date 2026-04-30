@@ -8,7 +8,7 @@ import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
 
-interface ApiService {
+interface AuthApiService {
 
     // POST /auth/register
     @POST("auth/register")

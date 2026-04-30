@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 private val Context.dataStore by preferencesDataStore("user_settings")
@@ -17,8 +18,14 @@ class SettingsDataStore(private val context: Context) {
         val KEY_MARKER_SIZE = floatPreferencesKey("markerSize")
         val KEY_CAMERA_MATRIX = stringPreferencesKey("camera_matrix")
         val KEY_DIST_COEFFS = stringPreferencesKey("dist_coeffs")
+        val KEY_MODELS_HASH = stringPreferencesKey("models_hash")
     }
 
+    suspend fun saveModelsHash(hash: String) {
+        context.dataStore.edit {
+            it[KEY_MODELS_HASH] = hash
+        }
+    }
     // Сохраняем данные
     suspend fun saveSettings(resolution: String, fps: Int, markerSize: Float) {
         context.dataStore.edit { preferences ->
@@ -36,6 +43,11 @@ class SettingsDataStore(private val context: Context) {
     }
 
     // Читаем данные
+    suspend fun getModelsHash(): String? {
+        return context.dataStore.data
+            .map { it[KEY_MODELS_HASH] }
+            .first()
+    }
     val settingsFlow: Flow<Triple<String, Int, Float>> = context.dataStore.data
         .map { preferences ->
             val res = preferences[KEY_RESOLUTION] ?: "1080x1200"

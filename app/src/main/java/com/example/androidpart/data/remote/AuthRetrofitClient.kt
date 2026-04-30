@@ -20,23 +20,23 @@ class AuthInterceptor(private val sessionManager: SessionManager) : Interceptor 
     }
 }
 
-object RetrofitClient {
+object AuthRetrofitClient {
     private val logging = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
     }
 
-    fun getApiService(sessionManager: SessionManager): ApiService {
+    fun getApiService(sessionManager: SessionManager): AuthApiService {
         val client = OkHttpClient.Builder()
             .addInterceptor(AuthInterceptor(sessionManager))
             .addInterceptor(logging)
             .build()
 
         val retrofit = Retrofit.Builder()
-            .baseUrl(BuildConfig.BASE_URL)
+            .baseUrl(BuildConfig.AUTH_URL)
             .client(client)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
 
-        return retrofit.create(ApiService::class.java)
+        return retrofit.create(AuthApiService::class.java)
     }
 }

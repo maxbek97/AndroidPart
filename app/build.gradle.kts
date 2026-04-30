@@ -20,8 +20,10 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:5000/\"")
-        buildConfigField("String", "WS_URL", "\"ws://localhost:8000/api/ws\"")
+        buildConfigField("String", "AUTH_URL", "\"http://127.0.0.1:5000/\"")
+        buildConfigField("String", "DETECTOR_BASE_URL", "\"http://127.0.0.1:8000/api/\"")
+        buildConfigField("String", "WS_URL", "\"ws://127.0.0.1:8000/api/ws\"")
+
     }
 
     buildTypes {
