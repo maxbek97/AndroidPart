@@ -17,15 +17,6 @@ object DetectorRetrofitClient {
             level = HttpLoggingInterceptor.Level.BODY
         }
 
-        val debugInterceptor = Interceptor { chain ->
-            val request = chain.request()
-            Log.d("HTTP", "→ ${request.method} ${request.url}")
-
-            val response = chain.proceed(request)
-
-            Log.d("HTTP", "← ${response.code} ${request.url}")
-            response
-        }
 
         val client = OkHttpClient.Builder()
             .addInterceptor(HttpLoggingInterceptor().apply {

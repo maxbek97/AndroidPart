@@ -27,6 +27,7 @@ import com.example.androidpart.data.remote.DetectorRepository
 import com.example.androidpart.data.remote.DetectorRetrofitClient
 import com.example.androidpart.data.remote.SessionManager
 import com.example.androidpart.ui.components.MenuButton
+import com.example.androidpart.ui.components.ModelsLoadingOverlay
 
 @Composable
 fun MenuScreen(navController: NavHostController) {
@@ -72,7 +73,6 @@ fun MenuScreen(navController: NavHostController) {
                 label = "Старт",
                 iconRes = R.drawable.qr_code_svgrepo_com,
                 onClick = {
-                    Log.d("MENU", "Нажали СТАРТ")
 
                     viewModel.onStartClicked {
                         navController.navigate("main")
@@ -90,18 +90,7 @@ fun MenuScreen(navController: NavHostController) {
 
         }
         if (viewModel.isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.7f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator()
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("Загружаем модели...", color = Color.White)
-                }
-            }
+            ModelsLoadingOverlay(progress = viewModel.progress)
         }
     }
 }

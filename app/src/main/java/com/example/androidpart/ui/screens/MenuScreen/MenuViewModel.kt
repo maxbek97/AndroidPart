@@ -13,6 +13,8 @@ class MenuViewModel(
     private val modelManager: ModelManager
 ) : ViewModel() {
 
+    var progress by mutableStateOf(0)
+        private set
     var isLoading by mutableStateOf(false)
         private set
 
@@ -20,13 +22,14 @@ class MenuViewModel(
         private set
 
     fun onStartClicked(onSuccess: () -> Unit) {
-        Log.d("MODEL", "onStartClicked вызван")
         viewModelScope.launch {
             isLoading = true
             error = null
+            progress = 0
 
-            Log.d("MODEL", "Начинаем prepareModels()")
-            val result = modelManager.prepareModels()
+            val result = modelManager.prepareModels {
+                percent -> progress = percent
+            }
 
             isLoading = false
 
