@@ -1,5 +1,7 @@
 package com.example.androidpart.ui.components.camera
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.ImageFormat
 import android.graphics.Rect
 import android.graphics.YuvImage
@@ -7,13 +9,15 @@ import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import java.io.ByteArrayOutputStream
 import android.util.Base64
+import android.util.Log
 import com.example.androidpart.data.remote.WsClient
 import com.example.androidpart.domain.model.WsMessage
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 class FrameAnalyzer(
-    private val wsClient: WsClient
+    private val wsClient: WsClient,
+    private val onFrameConverted: (Bitmap) -> Unit
 ) : ImageAnalysis.Analyzer {
 
     private var lastTime = 0L
@@ -26,38 +30,33 @@ class FrameAnalyzer(
             image.close()
             return
         }
+        try {
+            val bitmap = image.toBitmap()
+        // 1. Создаем Bitmap для отображения в "глазах"
+            Log.d("CAMERA_DEBUG", "Bitmap created: ${bitmap.width}x${bitmap.height}")
+            onFrameConverted(bitmap) // Отправляем в UI
 
-        val jpeg = imageProxyToJpeg(image)
-        val base64Image = Base64.encodeToString(jpeg, Base64.DEFAULT)
+            val outputStream = ByteArrayOutputStream()
+            // 80 - хороший баланс между качеством ArUco и размером пакета
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
+            val jpegBytes = outputStream.toByteArray()
+            // 4. Кодируем в Base64 (NO_WRAP критичен для корректного парсинга в Python)
+            val base64Image = Base64.encodeToString(jpegBytes, Base64.NO_WRAP)
+            val payload = WsMessage.Frame(
+                frame_id = frameCounter++,
+                image = base64Image
+            )
+            val jsonString = Json.encodeToString(payload)
+            wsClient.send(jsonString)
+            Log.d("CAMERA_DEBUG", "Frame sent to WS, ID: $frameCounter")
+        }
+        catch (e: Exception) {
+                Log.e("CAMERA_DEBUG", "Analysis error: ${e.message}")
+        }
+        finally {
+            lastTime = now
+            image.close()
+        }
 
-        val payload = WsMessage.Frame(
-            frame_id = frameCounter++,
-            image = base64Image
-        )
-
-        val jsonString = Json.encodeToString(payload)
-
-        wsClient.send(jsonString)
-
-        lastTime = now
-        image.close()
     }
-}
-fun imageProxyToJpeg(image: ImageProxy): ByteArray {
-    val yBuffer = image.planes[0].buffer
-    val uBuffer = image.planes[1].buffer
-    val vBuffer = image.planes[2].buffer
-
-    val nv21 = ByteArray(yBuffer.remaining() + uBuffer.remaining() + vBuffer.remaining())
-
-    yBuffer.get(nv21, 0, yBuffer.remaining())
-    vBuffer.get(nv21, yBuffer.remaining(), vBuffer.remaining())
-    uBuffer.get(nv21, yBuffer.remaining() + vBuffer.remaining(), uBuffer.remaining())
-
-    val yuvImage = YuvImage(nv21, ImageFormat.NV21, image.width, image.height, null)
-
-    val out = ByteArrayOutputStream()
-    yuvImage.compressToJpeg(Rect(0, 0, image.width, image.height), 70, out)
-
-    return out.toByteArray()
 }

@@ -2,24 +2,29 @@ package com.example.androidpart.ui.screens.MainScreen
 
 import android.app.Activity
 import android.content.pm.ActivityInfo
+import android.graphics.Bitmap
 import android.util.Log
 import android.util.Size
+import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavHostController
+import com.example.androidpart.data.local.ModelManager
 import com.example.androidpart.data.local.SettingsDataStore
 import com.example.androidpart.data.remote.WsClient
 import com.example.androidpart.domain.model.ArMarker
 import com.example.androidpart.domain.model.MarkerPayload
 import com.example.androidpart.domain.model.MarkerResponse
 import com.example.androidpart.domain.model.WsMessage
+import com.example.androidpart.ui.components.ar.ArEyeContainer
 import com.example.androidpart.ui.components.camera.CameraEyeView
 import com.example.androidpart.ui.components.camera.bindCamera
 import com.example.androidpart.ui.components.camera.rememberCameraPreviewView
@@ -32,10 +37,12 @@ fun MainScreen(navHostController: NavHostController) {
 
     val context = LocalContext.current
     val settings = remember { SettingsDataStore(context) }
+    var currentFrame by remember { mutableStateOf<Bitmap?>(null) }
     val wsClient = remember { WsClient() }
 
     val markersState = remember { mutableStateOf<List<ArMarker>>(emptyList()) }
     val scope = rememberCoroutineScope()
+
 
     LaunchedEffect(Unit) {
         wsClient.connect { message ->
@@ -85,15 +92,20 @@ fun MainScreen(navHostController: NavHostController) {
 
     // Р”Р’Рђ PreviewView
     val previewView = rememberCameraPreviewView(context)
-
     LaunchedEffect(Unit) {
         bindCamera(
             context,
             lifecycleOwner,
-            previewView,
+            previewView, // Передаем первый
             targetSize,
             wsClient
-        )
+        ) { bitmap ->
+            // КАМЕРА РАБОТАЕТ В СВОЕМ ПОТОКЕ, НУЖНО ВЕРНУТЬСЯ В MAIN ДЛЯ UI
+            (context as Activity).runOnUiThread {
+                Log.d("UI_DEBUG", "New frame received in UI: ${bitmap.byteCount} bytes")
+                currentFrame = bitmap
+            }// Обновляем кадр для обоих глаз сразу
+        }
     }
 
     Box(
@@ -101,22 +113,27 @@ fun MainScreen(navHostController: NavHostController) {
             .fillMaxSize()
             .background(Color.Black)
     ) {
+        Box(modifier = Modifier.size(1.dp).alpha(0f)) {
+            CameraEyeView(previewView = previewView)
+        }
 
         // 50/50 РєРѕРЅС‚РµРЅС‚
         Row(
             modifier = Modifier.fillMaxSize()
         ) {
 
-            CameraEyeView(
-                previewView = previewView,
-                modifier = Modifier.weight(1f)
+            // Левый глаз
+            ArEyeContainer(
+                modifier = Modifier.weight(1f),
+                markers = markersState.value,
+                frame = currentFrame
             )
 
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .background(Color.DarkGray)
+            // Правый глаз
+            ArEyeContainer(
+                modifier = Modifier.weight(1f),
+                markers = markersState.value,
+                frame = currentFrame
             )
 
         }

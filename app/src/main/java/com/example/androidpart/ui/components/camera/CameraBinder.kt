@@ -1,6 +1,7 @@
 package com.example.androidpart.ui.components.camera
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.util.Size
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
@@ -18,7 +19,8 @@ fun bindCamera(
     lifecycleOwner: LifecycleOwner,
     previewView: PreviewView,
     targetSize: Size,
-    wsClient: WsClient
+    wsClient: WsClient,
+    onNewFrame: (Bitmap) -> Unit
 ) {
     val imageAnalyzer = ImageAnalysis.Builder()
         .setTargetResolution(targetSize)
@@ -54,6 +56,6 @@ fun bindCamera(
 
     imageAnalyzer.setAnalyzer(
         ContextCompat.getMainExecutor(context),
-        FrameAnalyzer(wsClient)
+        FrameAnalyzer(wsClient, onNewFrame)
     )
 }
