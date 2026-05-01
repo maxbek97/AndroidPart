@@ -72,6 +72,9 @@ dependencies {
     implementation("androidx.camera:camera-view:1.3.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
     implementation(project(":opencv"))
+    implementation("com.google.android.filament:filament-android:1.57.0")
+    implementation("com.google.android.filament:gltfio-android:1.57.0")
+    implementation("com.google.android.filament:filament-utils-android:1.57.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
