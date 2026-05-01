@@ -8,7 +8,7 @@ import androidx.camera.core.ImageProxy
 import java.io.ByteArrayOutputStream
 import android.util.Base64
 import com.example.androidpart.data.remote.WsClient
-import com.example.androidpart.domain.model.FramePayload
+import com.example.androidpart.domain.model.WsMessage
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -30,7 +30,7 @@ class FrameAnalyzer(
         val jpeg = imageProxyToJpeg(image)
         val base64Image = Base64.encodeToString(jpeg, Base64.DEFAULT)
 
-        val payload = FramePayload(
+        val payload = WsMessage.Frame(
             frame_id = frameCounter++,
             image = base64Image
         )
