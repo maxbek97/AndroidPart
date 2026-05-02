@@ -5,6 +5,7 @@ import android.content.pm.ActivityInfo
 import android.graphics.Bitmap
 import android.util.Log
 import android.util.Size
+import android.view.WindowManager
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -84,9 +85,15 @@ fun MainScreen(navHostController: NavHostController) {
     val targetSize = Size(1080, 1080)
 
     DisposableEffect(Unit) {
+        val window = activity?.window
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         onDispose {
+            Log.d("UI_DEBUG", "MainScreen disposed: cleaning up...")
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+            wsClient.disconnect()
         }
     }
 
@@ -147,8 +154,40 @@ fun MainScreen(navHostController: NavHostController) {
         )
     }
 }
-fun parseStringMatrix(str: String): List<List<Double>> = Json.decodeFromString(str)
-fun parseStringList(str: String): List<Double> = Json.decodeFromString(str)
+fun parseStringMatrix(input: String): List<List<Double>> {
+    return try {
+        // 1. Разбиваем строку на ряды по точке с запятой
+        input.split(';')
+            .filter { it.isNotBlank() }
+            .map { row ->
+                // 2. Каждый ряд разбиваем на числа по запятой
+                row.split(',')
+                    .filter { it.isNotBlank() }
+                    .map { it.trim().toDouble() }
+            }
+    } catch (e: Exception) {
+        Log.e("CAMERA_CALIB", "Ошибка парсинга матрицы 3x3: ${e.message}")
+        // Возвращаем пустой вложенный список в случае ошибки
+        emptyList()
+    }
+}
+
+// Делаем parseStringList таким же безопасным
+fun parseStringList(str: String): List<Double> {
+    return try {
+        // Если строка начинается со скобки, парсим как JSON, иначе — как CSV
+        if (str.trim().startsWith("[")) {
+            Json.decodeFromString<List<Double>>(str)
+        } else {
+            str.split(',')
+                .filter { it.isNotBlank() }
+                .map { it.trim().toDouble() }
+        }
+    } catch (e: Exception) {
+        Log.e("CAMERA_CALIB", "Ошибка парсинга списка: ${e.message}")
+        emptyList()
+    }
+}
 
 val arJson = Json {
     ignoreUnknownKeys = true

@@ -1,6 +1,7 @@
 package com.example.androidpart.data.remote
 
 
+import android.util.Log
 import com.example.androidpart.BuildConfig
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -28,5 +29,11 @@ class WsClient {
 
     fun send(text: String) {
         webSocket?.send(text)
+    }
+    // Добавляем этот метод
+    fun disconnect() {
+        Log.d("WS_DEBUG", "Disconnecting WebSocket...")
+        webSocket?.close(1000, "Screen closed") // 1000 - нормальное закрытие
+        webSocket = null
     }
 }

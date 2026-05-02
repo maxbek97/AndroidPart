@@ -34,7 +34,7 @@ fun ArEyeContainer(
                 contentScale = ContentScale.Crop
             )
         }
-        // Слой 1: 3D Графика Filament (прозрачный SurfaceView поверх) Он изза него делает черным экран, но при этом детекция работает
+//        // Слой 1: 3D Графика Filament (прозрачный SurfaceView поверх) Он изза него делает черным экран, но при этом детекция работает
 //        FilamentView(
 //            markers = markers
 //        )
