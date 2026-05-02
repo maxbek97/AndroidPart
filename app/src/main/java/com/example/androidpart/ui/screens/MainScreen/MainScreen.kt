@@ -103,15 +103,14 @@ fun MainScreen(navHostController: NavHostController) {
         bindCamera(
             context,
             lifecycleOwner,
-            previewView, // Передаем первый
+            previewView,
             targetSize,
             wsClient
         ) { bitmap ->
-            // КАМЕРА РАБОТАЕТ В СВОЕМ ПОТОКЕ, НУЖНО ВЕРНУТЬСЯ В MAIN ДЛЯ UI
             (context as Activity).runOnUiThread {
                 Log.d("UI_DEBUG", "New frame received in UI: ${bitmap.byteCount} bytes")
                 currentFrame = bitmap
-            }// Обновляем кадр для обоих глаз сразу
+            }
         }
     }
 
@@ -124,7 +123,6 @@ fun MainScreen(navHostController: NavHostController) {
             CameraEyeView(previewView = previewView)
         }
 
-        // 50/50 РєРѕРЅС‚РµРЅС‚
         Row(
             modifier = Modifier.fillMaxSize()
         ) {
