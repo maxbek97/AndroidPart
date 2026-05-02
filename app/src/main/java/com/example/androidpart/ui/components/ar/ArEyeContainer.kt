@@ -15,13 +15,16 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import com.example.androidpart.data.local.ModelManager
 import com.example.androidpart.domain.model.ArMarker
-import com.example.androidpart.ui.components.camera.CameraEyeView
+import com.example.androidpart.rendering.filament.Eye
+import com.example.androidpart.rendering.filament.FilamentEngine
 
 @Composable
 fun ArEyeContainer(
     modifier: Modifier = Modifier,
     markers: List<ArMarker>,
-    frame: Bitmap?
+    frame: Bitmap?,
+    engine: FilamentEngine,
+    eye: Eye
 ) {
     Box(modifier = modifier.fillMaxHeight().background(Color.Blue)) {
 
@@ -36,7 +39,9 @@ fun ArEyeContainer(
         }
         // Слой 1: 3D Графика Filament (прозрачный SurfaceView поверх) Он изза него делает черным экран, но при этом детекция работает
         FilamentView(
-            markers = markers
+            markers = markers,
+            engine = engine,
+            eye = eye
         )
 
         // Слой 2: 2D Текст и рамки (самый верхний)
