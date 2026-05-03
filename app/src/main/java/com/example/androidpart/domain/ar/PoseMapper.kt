@@ -1,5 +1,8 @@
 package com.example.androidpart.domain.ar
 
+import kotlin.math.cos
+import kotlin.math.sin
+
 // domain/ar/PoseMapper.kt
 object PoseMapper {
     fun toFilamentMatrix(rvec: List<Double>, tvec: List<Double>): FloatArray {
@@ -20,14 +23,32 @@ object PoseMapper {
     }
 
     private fun rodriguesToRotationMatrix(rvec: List<Double>): FloatArray {
-        val theta = Math.sqrt(rvec[0]*rvec[0] + rvec[1]*rvec[1] + rvec[2]*rvec[2])
-        if (theta < 1e-6) return floatArrayOf(1f,0f,0f, 0f,1f,0f, 0f,0f,1f)
-
-        val r = rvec.map { (it / theta).toFloat() }
-        val cosT = Math.cos(theta).toFloat()
-        val sinT = Math.sin(theta).toFloat()
+        val theta = Math.sqrt(rvec[0] * rvec[0] + rvec[1] * rvec[1] + rvec[2] * rvec[2])
         val out = FloatArray(9)
-        // Формула Родрига...
+        if (theta < 1e-6) {
+            return floatArrayOf(1f, 0f, 0f, 0f, 1f, 0f, 0f, 0f, 1f)
+        }
+
+        val ux = (rvec[0] / theta).toFloat()
+        val uy = (rvec[1] / theta).toFloat()
+        val uz = (rvec[2] / theta).toFloat()
+
+        val c = cos(theta).toFloat()
+        val s = sin(theta).toFloat()
+        val t = 1f - c
+
+        out[0] = c + ux * ux * t
+        out[1] = ux * uy * t - uz * s
+        out[2] = ux * uz * t + uy * s
+
+        out[3] = uy * ux * t + uz * s
+        out[4] = c + uy * uy * t
+        out[5] = uy * uz * t - ux * s
+
+        out[6] = uz * ux * t - uy * s
+        out[7] = uz * uy * t + ux * s
+        out[8] = c + uz * uz * t
+
         return out
     }
 }

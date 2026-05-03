@@ -11,6 +11,7 @@ import java.io.ByteArrayOutputStream
 import android.util.Base64
 import android.util.Log
 import com.example.androidpart.data.remote.WsClient
+import com.example.androidpart.data.remote.arJson
 import com.example.androidpart.domain.model.WsMessage
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -33,7 +34,6 @@ class FrameAnalyzer(
         try {
             val bitmap = image.toBitmap()
         // 1. Создаем Bitmap для отображения в "глазах"
-            Log.d("CAMERA_DEBUG", "Bitmap created: ${bitmap.width}x${bitmap.height}")
             onFrameConverted(bitmap) // Отправляем в UI
 
             val outputStream = ByteArrayOutputStream()
@@ -42,16 +42,15 @@ class FrameAnalyzer(
             val jpegBytes = outputStream.toByteArray()
             // 4. Кодируем в Base64 (NO_WRAP критичен для корректного парсинга в Python)
             val base64Image = Base64.encodeToString(jpegBytes, Base64.NO_WRAP)
-            val payload = WsMessage.Frame(
+            val payload: WsMessage = WsMessage.Frame(
                 frame_id = frameCounter++,
                 image = base64Image
             )
-            val jsonString = Json.encodeToString(payload)
+
+            val jsonString = arJson.encodeToString<WsMessage>(payload)
             wsClient.send(jsonString)
-            Log.d("CAMERA_DEBUG", "Frame sent to WS, ID: $frameCounter")
         }
         catch (e: Exception) {
-                Log.e("CAMERA_DEBUG", "Analysis error: ${e.message}")
         }
         finally {
             lastTime = now

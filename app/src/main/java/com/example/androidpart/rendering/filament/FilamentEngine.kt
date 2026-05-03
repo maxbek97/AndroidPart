@@ -2,11 +2,10 @@ package com.example.androidpart.rendering.filament
 
 import android.content.Context
 import android.util.Log
-import android.view.Choreographer
-import android.view.SurfaceView
 import android.view.Surface
+import com.example.androidpart.domain.ar.PoseMapper
+import com.example.androidpart.domain.model.ArMarker
 import com.google.android.filament.*
-import com.google.android.filament.android.UiHelper
 import com.google.android.filament.gltfio.AssetLoader
 import com.google.android.filament.gltfio.FilamentAsset
 import com.google.android.filament.gltfio.Gltfio
@@ -145,5 +144,36 @@ class FilamentEngine(context: Context) {
         android.opengl.Matrix.translateM(matrix, 0, 0f, 0f, -2f)
 
         tm.setTransform(instance, matrix)
+    }
+
+    fun updateMarkersPoses(markers: List<ArMarker>) {
+        val asset = loadedAssets["test"] ?: run {
+            Log.e("FIL_DEBUG", "Модель 'test' не найдена в loadedAssets!")
+            return
+        }
+
+        val marker = markers.firstOrNull { it.tvec != null && it.rvec != null }
+
+
+
+
+
+        if (marker != null) {
+            // 1. Получаем матрицу из PoseMapper
+            val matrix = PoseMapper.toFilamentMatrix(marker.rvec!!, marker.tvec!!)
+
+            // 2. ВАЖНО: OpenCV Y и Z смотрят в противоположные стороны относительно Filament
+            // Инвертируем Y и Z оси в матрице трансляции (индексы 13 и 14 в Column-major)
+            matrix[13] = -matrix[13]
+            matrix[14] = -matrix[14]
+            Log.d("FIL_DEBUG", "Matrix Pos -> X: ${matrix[12]}, Y: ${matrix[13]}, Z: ${matrix[14]}")
+            // 3. Применяем масштаб (чтобы банан не был гигантским или крошечным)
+            // Для начала попробуй масштаб 1f, если что — подправим
+            val tm = engine.transformManager
+            tm.setTransform(tm.getInstance(asset.root), matrix)
+        }
+        else {
+            Log.w("FIL_DEBUG", "Нет маркеров с валидными rvec/tvec")
+        }
     }
 }

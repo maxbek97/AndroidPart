@@ -139,7 +139,7 @@ fun CalibrationScreen(navController: NavHostController) {
 }
 
 
-fun logCalibration(cameraMatrix: Mat, distCoeffs: Mat) {
+private fun logCalibration(cameraMatrix: Mat, distCoeffs: Mat) {
 
     Log.d("CALIB", "=== CAMERA MATRIX ===")
 
@@ -151,7 +151,7 @@ fun logCalibration(cameraMatrix: Mat, distCoeffs: Mat) {
     Log.d("CALIB", distCoeffs.dump())
 }
 
-fun matToString(mat: Mat): String {
+private fun matToString(mat: Mat): String {
     val sb = StringBuilder()
 
     for (i in 0 until mat.rows()) {
@@ -163,4 +163,13 @@ fun matToString(mat: Mat): String {
     }
 
     return sb.toString()
+}
+
+private fun getHintText(count: Int): String {
+    return when {
+        count < 3 -> "Держите доску прямо перед камерой"
+        count < 7 -> "Наклоните доску под углом"
+        count < 11 -> "Поднесите ближе/дальше"
+        else -> "Отлично! Еще немного"
+    }
 }

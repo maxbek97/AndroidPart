@@ -45,8 +45,8 @@ fun ArEyeContainer(
         )
 
         // Слой 2: 2D Текст и рамки (самый верхний)
-//        ArOverlayView(
-//            markers = markers
-//        )
+        ArOverlayView(
+            markers = markers
+        )
     }
 }

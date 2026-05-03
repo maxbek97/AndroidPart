@@ -7,6 +7,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.androidpart.data.local.SettingsDataStore
 import com.example.androidpart.data.remote.WsClient
+import com.example.androidpart.data.remote.arJson
 import com.example.androidpart.domain.model.ArMarker
 import com.example.androidpart.domain.model.MarkerResponse
 import com.example.androidpart.domain.model.WsMessage
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -36,13 +38,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _currentFrame = MutableStateFlow<Bitmap?>(null)
     val currentFrame: StateFlow<Bitmap?> = _currentFrame.asStateFlow()
 
-    private val arJson = Json {
-        ignoreUnknownKeys = true
-        coerceInputValues = true
-        encodeDefaults = true
-        classDiscriminator = "type"
-    }
-
     init {
         initNetworkAndData()
     }
@@ -52,8 +47,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             // 1. Подключаемся к сокету
             wsClient.connect { message ->
                 try {
-                    val response = arJson.decodeFromString<MarkerResponse>(message)
-                    _markers.value = response.markers
+                    val jsonElement = arJson.parseToJsonElement(message).jsonObject
+                    // Сначала проверяем, ЧТО пришло
+// Сначала проверяем, ЧТО пришло
+                    if (jsonElement.containsKey("markers")) {
+                        val response = arJson.decodeFromString<MarkerResponse>(message)
+                        _markers.value = response.markers
+                    } else if (jsonElement.containsKey("error")) {
+                        Log.e("VM_DEBUG", "Server error message: ${jsonElement["error"]}")
+                    } else {
+                        Log.d("VM_DEBUG", "Other message: $message")
+                    }
+
                 } catch (e: Exception) {
                     Log.e("VM_DEBUG", "Parse error: ${e.message}")
                 }
@@ -69,13 +74,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val markerSize = currentSettings.third
 
                 if (matrixStr != null && distStr != null) {
-                    val initPacket = WsMessage.Init(
+                    val initPacket: WsMessage = WsMessage.Init(
                         camera_matrix = parseStringMatrix(matrixStr),
                         dist_coeffs = parseStringList(distStr),
                         marker_length = markerSize.toDouble()
+
                     )
-                    wsClient.send(Json.encodeToString(initPacket))
-                    Log.d("VM_DEBUG", "Init packet sent successfully")
+                    val jsonToSend = arJson.encodeToString<WsMessage>(initPacket)
+
+                    wsClient.send(jsonToSend)
+
                 }
             } catch (e: Exception) {
                 Log.e("VM_DEBUG", "Error during init: ${e.message}")
@@ -85,7 +93,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // Обновление кадра из CameraX (вызывается из MainScreen)
     fun updateFrame(bitmap: Bitmap) {
-        Log.d("UI_DEBUG", "New frame received in UI: ${bitmap.byteCount} bytes")
         _currentFrame.value = bitmap
     }
 
@@ -107,13 +114,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun parseStringList(str: String): List<Double> {
         return try {
-            if (str.trim().startsWith("[")) {
-                Json.decodeFromString<List<Double>>(str)
-            } else {
-                str.split(',').filter { it.isNotBlank() }.map { it.trim().toDouble() }
-            }
+            // Регулярка [;,\\s]+ разделит и по запятой, и по точке с запятой, и по пробелу
+            str.replace("[", "").replace("]", "")
+                .split(Regex("[;,\\s]+"))
+                .filter { it.isNotBlank() }
+                .map { it.trim().toDouble() }
         } catch (e: Exception) {
-            Log.e("VM_DEBUG", "List parse error"); emptyList()
+            Log.e("VM_DEBUG", "List parse error in: $str"); emptyList()
         }
     }
 

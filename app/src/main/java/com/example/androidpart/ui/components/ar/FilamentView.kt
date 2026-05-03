@@ -26,7 +26,15 @@ fun FilamentView(
     eye: Eye
 ) {
     val context = LocalContext.current
-
+    LaunchedEffect(markers) {
+        if (markers.isNotEmpty()) {
+            Log.d("UI_TRACE", "LaunchedEffect: получено ${markers.size} маркеров")
+            engine.updateMarkersPoses(markers)
+        } else {
+            // Если список пустой, банан может просто "зависнуть" в последней позиции
+            Log.w("UI_TRACE", "LaunchedEffect: список маркеров пуст")
+        }
+    }
     AndroidView(
         factory = { ctx ->
             SurfaceView(ctx).apply {
@@ -41,7 +49,6 @@ fun FilamentView(
                         val file = File(context.filesDir, "models/banana.glb")
                         if (file.exists()) {
                             engine.loadModel("test", file)
-                            engine.placeModelInFront("test")
                         }
                     }
 
