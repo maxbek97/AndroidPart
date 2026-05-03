@@ -5,6 +5,7 @@ import android.util.Log
 import android.view.Surface
 import com.example.androidpart.domain.ar.PoseMapper
 import com.example.androidpart.domain.model.ArMarker
+import com.example.androidpart.domain.model.MarkerPayload
 import com.google.android.filament.*
 import com.google.android.filament.gltfio.AssetLoader
 import com.google.android.filament.gltfio.FilamentAsset
@@ -37,13 +38,15 @@ class FilamentEngine(context: Context) {
     private val resourceLoader = ResourceLoader(engine)
 
     private val loadedAssets = mutableMapOf<String, FilamentAsset>()
-    private class EyeResources(val view: View, val camera: Camera, val cameraEntity: Entity)
+    private val currentMatrices = mutableMapOf<String, FloatArray>()
+    private val lerpFactor = 0.3f
+    private val activeModelsInScene = mutableSetOf<String>()
 
     // Храним две поверхности
     private var leftSwapChain: SwapChain? = null
     private var rightSwapChain: SwapChain? = null
 
-    private var swapChain: SwapChain? = null
+
     init {
         view.scene = scene
         view.camera = camera
@@ -118,7 +121,6 @@ class FilamentEngine(context: Context) {
         if (loadedAssets.containsKey(name)) return
 
         val buffer = ByteBuffer.wrap(file.readBytes())
-
         val asset = assetLoader.createAssetFromBinary(buffer)
             ?: run {
                 Log.e("FILAMENT", "Не удалось загрузить модель")
@@ -128,52 +130,80 @@ class FilamentEngine(context: Context) {
         resourceLoader.loadResources(asset)
         asset.releaseSourceData()
 
-        scene.addEntities(asset.entities)
-
         loadedAssets[name] = asset
-    }
-    fun placeModelInFront(name: String) {
-        val asset = loadedAssets[name] ?: return
-
-        val tm = engine.transformManager
-        val instance = tm.getInstance(asset.root)
-
-        val matrix = FloatArray(16)
-
-        android.opengl.Matrix.setIdentityM(matrix, 0)
-        android.opengl.Matrix.translateM(matrix, 0, 0f, 0f, -2f)
-
-        tm.setTransform(instance, matrix)
+        Log.d("FILAMENT_DEBUG", "Загружена модель: $name")
     }
 
     fun updateMarkersPoses(markers: List<ArMarker>) {
-        val asset = loadedAssets["test"] ?: run {
-            Log.e("FIL_DEBUG", "Модель 'test' не найдена в loadedAssets!")
-            return
+        val detectedInThisFrame = mutableSetOf<String>()
+
+        // 1. Обновляем существующие или добавляем новые
+        markers.forEach { marker ->
+            val payload = marker.payload
+            if (payload is MarkerPayload.Model && marker.tvec != null && marker.rvec != null) {
+                val modelName = payload.value.src
+                detectedInThisFrame.add(modelName)
+
+                updateSingleMarker(modelName, marker)
+            }
         }
 
-        val marker = markers.firstOrNull { it.tvec != null && it.rvec != null }
+        // 2. Очищаем те, что пропали
+        cleanupMissingMarkers(detectedInThisFrame)
+    }
+    private fun updateSingleMarker(modelName: String, marker: ArMarker) {
+        val asset = loadedAssets[modelName] ?: return
 
-
-
-
-
-        if (marker != null) {
-            // 1. Получаем матрицу из PoseMapper
-            val matrix = PoseMapper.toFilamentMatrix(marker.rvec!!, marker.tvec!!)
-
-            // 2. ВАЖНО: OpenCV Y и Z смотрят в противоположные стороны относительно Filament
-            // Инвертируем Y и Z оси в матрице трансляции (индексы 13 и 14 в Column-major)
-            matrix[13] = -matrix[13]
-            matrix[14] = -matrix[14]
-            Log.d("FIL_DEBUG", "Matrix Pos -> X: ${matrix[12]}, Y: ${matrix[13]}, Z: ${matrix[14]}")
-            // 3. Применяем масштаб (чтобы банан не был гигантским или крошечным)
-            // Для начала попробуй масштаб 1f, если что — подправим
-            val tm = engine.transformManager
-            tm.setTransform(tm.getInstance(asset.root), matrix)
+        // Если модели нет в сцене — добавляем
+        if (modelName !in activeModelsInScene) {
+            Log.d("FILAMENT_DEBUG", "+++ Добавляем в сцену: $modelName")
+            asset.entities.forEach { scene.addEntity(it) }
+            activeModelsInScene.add(modelName)
         }
-        else {
-            Log.w("FIL_DEBUG", "Нет маркеров с валидными rvec/tvec")
+
+        // Считаем матрицу
+        val targetMatrix = PoseMapper.toFilamentMatrix(marker.rvec!!, marker.tvec!!)
+
+        // Коррекция осей и масштаб
+        targetMatrix[13] = -targetMatrix[13]
+        targetMatrix[14] = -targetMatrix[14]
+        val scaleFactor = 10.0f
+        android.opengl.Matrix.scaleM(targetMatrix, 0, scaleFactor, scaleFactor, scaleFactor)
+
+        // Применяем LERP
+        val finalMatrix = applyLerp(modelName, targetMatrix)
+
+        // Применяем трансформ
+        val tm = engine.transformManager
+        tm.setTransform(tm.getInstance(asset.root), finalMatrix)
+    }
+
+    private fun applyLerp(modelName: String, targetMatrix: FloatArray): FloatArray {
+        val current = currentMatrices[modelName] ?: return targetMatrix.also {
+            currentMatrices[modelName] = it
+        }
+
+        val result = FloatArray(16) { i ->
+            current[i] + lerpFactor * (targetMatrix[i] - current[i])
+        }
+        currentMatrices[modelName] = result
+        return result
+    }
+
+    private fun cleanupMissingMarkers(detectedInThisFrame: Set<String>) {
+        val iterator = activeModelsInScene.iterator()
+        while (iterator.hasNext()) {
+            val modelName = iterator.next()
+            if (modelName !in detectedInThisFrame) {
+                Log.d("FILAMENT_DEBUG", "--- Удаляем из сцены: $modelName")
+
+                loadedAssets[modelName]?.entities?.forEach { entity ->
+                    scene.removeEntity(entity)
+                }
+
+                currentMatrices.remove(modelName) // Сбрасываем LERP
+                iterator.remove() // Удаляем из списка активных
+            }
         }
     }
 }

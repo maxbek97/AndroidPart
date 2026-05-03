@@ -27,13 +27,24 @@ fun FilamentView(
 ) {
     val context = LocalContext.current
     LaunchedEffect(markers) {
-        if (markers.isNotEmpty()) {
-            Log.d("UI_TRACE", "LaunchedEffect: получено ${markers.size} маркеров")
-            engine.updateMarkersPoses(markers)
-        } else {
-            // Если список пустой, банан может просто "зависнуть" в последней позиции
-            Log.w("UI_TRACE", "LaunchedEffect: список маркеров пуст")
+        markers.forEach { marker ->
+            val payload = marker.payload
+            if (payload is MarkerPayload.Model) {
+                val modelName = payload.value.src
+
+                // Проверяем, загружена ли уже модель в движок
+                // (Для этого можно добавить метод engine.hasModel(name))
+
+                val modelFile = File(context.filesDir, "models/$modelName")
+                if (modelFile.exists()) {
+                    engine.loadModel(modelName, modelFile)
+                } else {
+                    Log.e("AR_VIEW", "Файл модели $modelName не найден в локальном хранилище!")
+                }
+            }
         }
+
+        engine.updateMarkersPoses(markers)
     }
     AndroidView(
         factory = { ctx ->
@@ -45,15 +56,9 @@ fun FilamentView(
                 holder.addCallback(object : SurfaceHolder.Callback {
                     override fun surfaceCreated(holder: SurfaceHolder) {
                         engine.attachSurface(eye, holder.surface, width, height)
-
-                        val file = File(context.filesDir, "models/banana.glb")
-                        if (file.exists()) {
-                            engine.loadModel("test", file)
-                        }
                     }
 
                     override fun surfaceChanged(holder: SurfaceHolder, format: Int, w: Int, h: Int) {
-
                     }
 
                     override fun surfaceDestroyed(holder: SurfaceHolder) {
