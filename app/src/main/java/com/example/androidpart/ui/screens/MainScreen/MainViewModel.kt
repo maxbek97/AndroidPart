@@ -5,6 +5,8 @@ import android.graphics.Bitmap
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.androidpart.core.math.parseStringList
+import com.example.androidpart.core.math.parseStringMatrix
 import com.example.androidpart.data.local.SettingsDataStore
 import com.example.androidpart.data.remote.WsClient
 import com.example.androidpart.data.remote.arJson
@@ -37,25 +39,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _currentFrame = MutableStateFlow<Bitmap?>(null)
     val currentFrame: StateFlow<Bitmap?> = _currentFrame.asStateFlow()
-    private val _cameraMatrix = MutableStateFlow<List<List<Double>>?>(null)
-    val cameraMatrix = _cameraMatrix.asStateFlow()
+
 
     init {
         initNetworkAndData()
-        observeCalibration()
-    }
-
-    private fun observeCalibration() {
-        viewModelScope.launch {
-            // Слушаем изменения калибровки
-            settingsDataStore.calibrationFlow.collect { (matrixStr, _) ->
-
-                matrixStr?.let {
-                    _cameraMatrix.value = parseStringMatrix(it)
-                    // Больше здесь ничего не вызываем!
-                }
-            }
-        }
     }
 
     private fun initNetworkAndData() {
@@ -84,15 +71,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val calibration = settingsDataStore.calibrationFlow.first()
                 val currentSettings = settingsDataStore.settingsFlow.first()
-
-                val matrixStr = calibration.first
-                val distStr = calibration.second
                 val markerSize = currentSettings.third
 
-                if (matrixStr != null && distStr != null) {
+                if (calibration != null) {
                     val initPacket: WsMessage = WsMessage.Init(
-                        camera_matrix = parseStringMatrix(matrixStr),
-                        dist_coeffs = parseStringList(distStr),
+                        camera_matrix = calibration.cameraMatrix,
+                        dist_coeffs = calibration.distCoeffs,
                         marker_length = markerSize.toDouble()
 
                     )
@@ -114,31 +98,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // --- УТИЛИТЫ ПАРСИНГА (теперь они не мусорят в UI) ---
 
-    private fun parseStringMatrix(input: String): List<List<Double>> {
-        return try {
-            input.split(';')
-                .filter { it.isNotBlank() }
-                .map { row ->
-                    row.split(',')
-                        .filter { it.isNotBlank() }
-                        .map { it.trim().toDouble() }
-                }
-        } catch (e: Exception) {
-            Log.e("VM_DEBUG", "Matrix parse error"); emptyList()
-        }
-    }
 
-    private fun parseStringList(str: String): List<Double> {
-        return try {
-            // Регулярка [;,\\s]+ разделит и по запятой, и по точке с запятой, и по пробелу
-            str.replace("[", "").replace("]", "")
-                .split(Regex("[;,\\s]+"))
-                .filter { it.isNotBlank() }
-                .map { it.trim().toDouble() }
-        } catch (e: Exception) {
-            Log.e("VM_DEBUG", "List parse error in: $str"); emptyList()
-        }
-    }
 
     override fun onCleared() {
         super.onCleared()

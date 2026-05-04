@@ -11,15 +11,21 @@ object PoseMapper {
         val rotationMatrix = rodriguesToRotationMatrix(rvec)
 
         // 2. Формируем матрицу 4x4 для Filament (Column-major order)
-        val matrix = FloatArray(16)
+        val openCVMatrix = FloatArray(16).apply {
+            this[0] = rotationMatrix[0]; this[4] = rotationMatrix[1]; this[8] = rotationMatrix[2];  this[12] = tvec[0].toFloat()
+            this[1] = rotationMatrix[3]; this[5] = rotationMatrix[4]; this[9] = rotationMatrix[5];  this[13] = tvec[1].toFloat()
+            this[2] = rotationMatrix[6]; this[6] = rotationMatrix[7]; this[10] = rotationMatrix[8]; this[14] = tvec[2].toFloat()
+            this[3] = 0f;                this[7] = 0f;                this[11] = 0f;                this[15] = 1f
+        }
+        val correctionMatrix = FloatArray(16)
+        android.opengl.Matrix.setIdentityM(correctionMatrix, 0)
+        android.opengl.Matrix.rotateM(correctionMatrix, 0, 270f, 1f, 0f, 0f)
 
-        // Матрица вращения и трансляции
-        matrix[0] = rotationMatrix[0]; matrix[4] = rotationMatrix[1]; matrix[8] = rotationMatrix[2];  matrix[12] = tvec[0].toFloat()
-        matrix[1] = rotationMatrix[3]; matrix[5] = rotationMatrix[4]; matrix[9] = rotationMatrix[5];  matrix[13] = tvec[1].toFloat()
-        matrix[2] = rotationMatrix[6]; matrix[6] = rotationMatrix[7]; matrix[10] = rotationMatrix[8]; matrix[14] = tvec[2].toFloat()
-        matrix[3] = 0f;                matrix[7] = 0f;                matrix[11] = 0f;                matrix[15] = 1f
+        val resultMatrix = FloatArray(16)
+        // Важно: умножаем Исходную на Коррекцию, чтобы поворот был локальным для модели
+        android.opengl.Matrix.multiplyMM(resultMatrix, 0, openCVMatrix, 0, correctionMatrix, 0)
 
-        return matrix
+        return resultMatrix
     }
 
     private fun rodriguesToRotationMatrix(rvec: List<Double>): FloatArray {

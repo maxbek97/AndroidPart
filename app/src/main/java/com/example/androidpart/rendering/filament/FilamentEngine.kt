@@ -6,6 +6,7 @@ import android.view.Surface
 import com.example.androidpart.domain.ar.PoseMapper
 import com.example.androidpart.domain.model.ArMarker
 import com.example.androidpart.domain.model.MarkerPayload
+import com.example.androidpart.domain.model.ModelData
 import com.google.android.filament.*
 import com.google.android.filament.gltfio.AssetLoader
 import com.google.android.filament.gltfio.FilamentAsset
@@ -39,10 +40,12 @@ class FilamentEngine(context: Context) {
 
     private val loadedAssets = mutableMapOf<String, FilamentAsset>()
     private val currentMatrices = mutableMapOf<String, FloatArray>()
+
     private val lerpFactor = 0.3f
     private val activeModelsInScene = mutableSetOf<String>()
 
-    // Храним две поверхности
+    private val localTransformCache = mutableMapOf<String, FloatArray>()
+
     private var leftSwapChain: SwapChain? = null
     private var rightSwapChain: SwapChain? = null
 
@@ -53,7 +56,7 @@ class FilamentEngine(context: Context) {
 
         renderer.setClearOptions(
             Renderer.ClearOptions().apply {
-                clearColor = floatArrayOf(1f, 0f, 0f, 0.3f)
+                clearColor = floatArrayOf(0f, 0f, 0f, 0f)
                 clear = true
             }
         )
@@ -63,7 +66,6 @@ class FilamentEngine(context: Context) {
 
         scene.skybox = null
         scene.indirectLight = null
-        // Камера пока фиксированная (НЕ AR!)
         camera.lookAt(
             0.0, 0.0, 3.0,   // eye
             0.0, 0.0, 0.0,   // center
@@ -80,14 +82,61 @@ class FilamentEngine(context: Context) {
 
         scene.addEntity(light)
     }
+    fun updateCameraProjection(
+        cameraMatrix: List<List<Double>>,
+        frameWidth: Float,  // Ширина реально пришедшего Bitmap
+        frameHeight: Float, // Высота реально пришедшего Bitmap
+        calibWidth: Float,  // Ширина, для которой делалась калибровка
+        calibHeight: Float  // Высота, для которой делалась калибровка
+    ) {
+        // Вычисляем коэффициенты масштабирования, если Bitmap отличается от калибровки
+        val scaleX = frameWidth / calibWidth
+        val scaleY = frameHeight / calibHeight
+
+        Log.d("AR_CENTER_DEBUG", """
+        Frame Size: ${frameWidth}x${frameHeight}
+        Calib Size: ${calibWidth}x${calibHeight}
+        Scale: ${scaleX}x${scaleY}
+    """.trimIndent())
+
+        // Извлекаем параметры из матрицы камеры (OpenCV format)
+        val fx = cameraMatrix[0][0] * scaleX
+        val fy = cameraMatrix[1][1] * scaleY
+        val cx = cameraMatrix[0][2] * scaleX
+        val cy = cameraMatrix[1][2] * scaleY
+
+// ЛОГИ ДЛЯ ПРОВЕРКИ СМЕЩЕНИЯ
+        Log.d("AR_CENTER_DEBUG", """
+        Expected Center: ${frameWidth / 2} x ${frameHeight / 2}
+        Actual CX/CY: $cx x $cy
+        Diff X: ${cx - frameWidth / 2}
+        Diff Y: ${cy - frameHeight / 2}
+    """.trimIndent())
+
+        val near = 0.1
+        val far = 100.0
+
+        // Собираем матрицу проекции для Filament (Column-major)
+        // Используем формулу для перевода OpenCV матрицы в OpenGL-совместимую
+        val projectionMatrix = DoubleArray(16).apply {
+            this[0] = 2.0 * fx / frameWidth
+            this[5] = 2.0 * fy / frameHeight
+            this[8] = (2.0 * cx / frameWidth) - 1.0
+            this[9] = 1.0 - (2.0 * cy / frameHeight)
+            this[10] = -(far + near) / (far - near)
+            this[11] = -1.0
+            this[14] = -(2.0 * far * near) / (far - near)
+            this[15] = 0.0
+        }
+
+        camera.setCustomProjection(projectionMatrix, near, far)
+    }
     fun attachSurface(eye: Eye, surface: Surface, width: Int, height: Int) {
         val sc = engine.createSwapChain(surface)
         if (eye == Eye.LEFT) leftSwapChain = sc else rightSwapChain = sc
 
         // Настраиваем вьюпорт (обычно они одинаковые для обоих глаз)
         view.viewport = Viewport(0, 0, width, height)
-        val aspect = width.toDouble() / height.toDouble()
-        camera.setProjection(45.0, aspect, 0.1, 100.0, Camera.Fov.VERTICAL)
     }
 
     fun detachSurface(eye: Eye) {
@@ -123,7 +172,6 @@ class FilamentEngine(context: Context) {
         val buffer = ByteBuffer.wrap(file.readBytes())
         val asset = assetLoader.createAssetFromBinary(buffer)
             ?: run {
-                Log.e("FILAMENT", "Не удалось загрузить модель")
                 return
             }
 
@@ -131,7 +179,6 @@ class FilamentEngine(context: Context) {
         asset.releaseSourceData()
 
         loadedAssets[name] = asset
-        Log.d("FILAMENT_DEBUG", "Загружена модель: $name")
     }
 
     fun updateMarkersPoses(markers: List<ArMarker>) {
@@ -144,14 +191,18 @@ class FilamentEngine(context: Context) {
                 val modelName = payload.value.src
                 detectedInThisFrame.add(modelName)
 
-                updateSingleMarker(modelName, marker)
+                updateSingleMarker(marker)
             }
         }
 
         // 2. Очищаем те, что пропали
         cleanupMissingMarkers(detectedInThisFrame)
     }
-    private fun updateSingleMarker(modelName: String, marker: ArMarker) {
+    private fun updateSingleMarker(marker: ArMarker) {
+        val payload = marker.payload as? MarkerPayload.Model ?: return
+        val modelData = payload.value
+        val modelName = modelData.src
+
         val asset = loadedAssets[modelName] ?: return
 
         // Если модели нет в сцене — добавляем
@@ -162,20 +213,61 @@ class FilamentEngine(context: Context) {
         }
 
         // Считаем матрицу
-        val targetMatrix = PoseMapper.toFilamentMatrix(marker.rvec!!, marker.tvec!!)
+        val markerMatrix = PoseMapper.toFilamentMatrix(marker.rvec!!, marker.tvec!!)
+        markerMatrix[13] = -markerMatrix[13] // Инверсия Y (OpenCV -> Filament)
+        markerMatrix[14] = -markerMatrix[14]
 
-        // Коррекция осей и масштаб
-        targetMatrix[13] = -targetMatrix[13]
-        targetMatrix[14] = -targetMatrix[14]
-        val scaleFactor = 10.0f
-        android.opengl.Matrix.scaleM(targetMatrix, 0, scaleFactor, scaleFactor, scaleFactor)
+        Log.d("AR_POSE_DEBUG", "TVEC: ${marker.tvec}, RVEC: ${marker.rvec}")
+        val localMatrix = getLocalTransform(modelData)
+        val targetMatrix = FloatArray(16)
+        android.opengl.Matrix.multiplyMM(targetMatrix, 0, markerMatrix, 0, localMatrix, 0)
+        //android.opengl.Matrix.rotateM(targetMatrix, 0, 270f, 1f, 0f, 0f)
 
+
+        //val scaleFactor = 0.7f
+//        android.opengl.Matrix.scaleM(targetMatrix, 0, scaleFactor, scaleFactor, scaleFactor)
+//        android.opengl.Matrix.translateM(targetMatrix, 0, 0f, 0f, -0.5f)
         // Применяем LERP
         val finalMatrix = applyLerp(modelName, targetMatrix)
-
-        // Применяем трансформ
         val tm = engine.transformManager
         tm.setTransform(tm.getInstance(asset.root), finalMatrix)
+    }
+    private fun getLocalTransform(modelData: ModelData): FloatArray {
+        // Используем src как ключ, так как для одного файла настройки всегда одинаковые
+        return localTransformCache.getOrPut(modelData.src) {
+            val localMatrix = FloatArray(16)
+            android.opengl.Matrix.setIdentityM(localMatrix, 0)
+
+            // Порядок в Unity: Translate -> Rotate -> Scale
+            // В OpenGL (Matrix.multiply) он будет обратным при умножении,
+            // но эти методы модифицируют текущую матрицу последовательно:
+
+            // 1. Смещение
+            android.opengl.Matrix.translateM(
+                localMatrix, 0,
+                modelData.start_position.getOrElse(0) { 0f },
+                modelData.start_position.getOrElse(1) { 0f },
+                modelData.start_position.getOrElse(2) { 0f }
+            )
+
+            // 2. Вращение
+            val rx = modelData.rotation.getOrElse(0) { 0f }
+            val ry = modelData.rotation.getOrElse(1) { 0f }
+            val rz = modelData.rotation.getOrElse(2) { 0f }
+            if (rx != 0f) android.opengl.Matrix.rotateM(localMatrix, 0, rx, 1f, 0f, 0f)
+            if (ry != 0f) android.opengl.Matrix.rotateM(localMatrix, 0, ry, 0f, 1f, 0f)
+            if (rz != 0f) android.opengl.Matrix.rotateM(localMatrix, 0, rz, 0f, 0f, 1f)
+
+            // 3. Масштаб
+            android.opengl.Matrix.scaleM(
+                localMatrix, 0,
+                modelData.scale.getOrElse(0) { 1f },
+                modelData.scale.getOrElse(1) { 1f },
+                modelData.scale.getOrElse(2) { 1f }
+            )
+
+            localMatrix
+        }
     }
 
     private fun applyLerp(modelName: String, targetMatrix: FloatArray): FloatArray {

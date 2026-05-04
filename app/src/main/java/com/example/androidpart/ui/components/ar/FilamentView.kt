@@ -13,6 +13,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.example.androidpart.data.local.ModelManager
 import com.example.androidpart.domain.ar.PoseMapper
 import com.example.androidpart.domain.model.ArMarker
+import com.example.androidpart.domain.model.CameraIntrinsics
 import com.example.androidpart.domain.model.MarkerPayload
 import com.example.androidpart.rendering.filament.Eye
 import com.example.androidpart.rendering.filament.FilamentEngine
@@ -23,9 +24,18 @@ fun FilamentView(
     modifier: Modifier = Modifier,
     markers: List<ArMarker>,
     engine: FilamentEngine,
-    eye: Eye
+    eye: Eye,
+    frameWidth: Float,
+    frameHeight: Float,
+    calibrationData: CameraIntrinsics
 ) {
     val context = LocalContext.current
+    LaunchedEffect(calibrationData, frameWidth, frameHeight) {
+        calibrationData.cameraMatrix?.let {
+            engine.updateCameraProjection(it, frameWidth, frameHeight, calibrationData.calibWidth, calibrationData.calibHeight)
+        }
+    }
+
     LaunchedEffect(markers) {
         markers.forEach { marker ->
             val payload = marker.payload

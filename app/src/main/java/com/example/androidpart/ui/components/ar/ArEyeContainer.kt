@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import com.example.androidpart.data.local.ModelManager
 import com.example.androidpart.domain.model.ArMarker
+import com.example.androidpart.domain.model.CameraIntrinsics
 import com.example.androidpart.rendering.filament.Eye
 import com.example.androidpart.rendering.filament.FilamentEngine
 
@@ -26,20 +27,18 @@ fun ArEyeContainer(
     frame: Bitmap?,
     engine: FilamentEngine,
     eye: Eye,
-    frameWidth: Float,  // FallBack
-    frameHeight: Float,
-    cameraMatrix: List<List<Double>>?
+    calibrationData: CameraIntrinsics
 ) {
-    val actualWidth = frame?.width?.toFloat() ?: frameWidth
-    val actualHeight = frame?.height?.toFloat() ?: frameHeight
+    val actualWidth = frame?.width?.toFloat() ?: calibrationData.calibWidth
+    val actualHeight = frame?.height?.toFloat() ?: calibrationData.calibHeight
 
     // Добавь этот Side Effect для отладки
-    LaunchedEffect(actualWidth, actualHeight, frameWidth, frameHeight) {
+    LaunchedEffect(actualWidth, actualHeight, calibrationData.calibWidth, calibrationData.calibHeight) {
         Log.d("AR_DEBUG_DIMENS", """
         [EYE: $eye] 
-        Settings (Calib): ${frameWidth}x${frameHeight}
+        Settings (Calib): ${calibrationData.calibWidth}x${calibrationData.calibHeight}
         Actual Bitmap: ${actualWidth}x${actualHeight}
-        Scale Diff: X:${actualWidth/frameWidth} Y:${actualHeight/frameHeight}
+        Scale Diff: X:${actualWidth/calibrationData.calibWidth} Y:${actualHeight/calibrationData.calibHeight}
     """.trimIndent())
     }
 
@@ -61,9 +60,7 @@ fun ArEyeContainer(
             eye = eye,
             frameWidth = actualWidth,
             frameHeight = actualHeight,
-            cameraMatrix = cameraMatrix,
-            calibWidth = frameWidth,
-            calibHeight = frameHeight
+            calibrationData = calibrationData
         )
 
         // Слой 2: 2D Текст и рамки (самый верхний)

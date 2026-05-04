@@ -32,15 +32,17 @@ fun MainScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
 
     val settings by viewModel.settingsDataStore.settingsFlow.collectAsState(initial = Triple("640x480", 60, 0.05f))
+    val calibrationData by viewModel.settingsDataStore
+        .calibrationFlow
+        .collectAsState(initial = null)
     val (fW, fH) = remember(settings.first) {
         val parts = settings.first.split("x")
         parts[0].toFloat() to parts[1].toFloat()
     }
-
+    val calib = calibrationData ?: return
     val engine = viewModel.engine
     val markers by viewModel.markers.collectAsState()
     val currentFrame by viewModel.currentFrame.collectAsState()
-    val cameraMatrix by viewModel.cameraMatrix.collectAsState()
 
     LaunchedEffect(engine) {
         while (true) {
@@ -99,9 +101,7 @@ fun MainScreen(
                 frame = currentFrame,
                 engine = engine,
                 eye = Eye.LEFT,
-                frameWidth = fW,  // Передаем напрямую
-                frameHeight = fH,
-                cameraMatrix = cameraMatrix
+                calibrationData = calib
             )
 
             // Правый глаз
@@ -111,9 +111,7 @@ fun MainScreen(
                 frame = currentFrame,
                 engine = engine,
                 eye = Eye.RIGHT,
-                frameWidth = fW,  // Передаем напрямую
-                frameHeight = fH,
-                cameraMatrix = cameraMatrix
+                calibrationData = calib
             )
 
         }

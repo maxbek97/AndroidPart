@@ -48,7 +48,7 @@ fun CalibrationScreen(navController: NavHostController) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
-
+    var actualSize by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     val detector = remember { ChessboardDetector() }
     val calibrationManager = remember { CalibrationManager() }
     val cameraController = remember { CameraController() }
@@ -68,9 +68,12 @@ fun CalibrationScreen(navController: NavHostController) {
 
     val previewView = remember { PreviewView(context) }
     val analyzer = remember {
-        FrameAnalyzer(detector) { result ->
+        FrameAnalyzer(detector) { result, width, height ->
             detected = result.found
             currentCorners = result.corners
+            if (actualSize == null) {
+                actualSize = width to height
+            }
         }
     }
 
@@ -148,8 +151,10 @@ fun CalibrationScreen(navController: NavHostController) {
                             scope.launch {
                                 settingsDataStore.saveCalibration(
                                     matToString(cameraMatrix),
-                                    matToString(distCoeffs)
+                                    matToString(distCoeffs),
+                                    "${actualSize?.first}x${actualSize?.second}"
                                 )
+                                Log.e("CALIB_SIZE", "${actualSize?.first}x${actualSize?.second}")
                                 calibrationManager.clear()
                                 navController.popBackStack()
                             }

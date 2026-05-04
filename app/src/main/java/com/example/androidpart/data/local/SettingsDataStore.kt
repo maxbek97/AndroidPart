@@ -4,6 +4,9 @@ import android.content.Context
 
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.androidpart.core.math.parseStringList
+import com.example.androidpart.core.math.parseStringMatrix
+import com.example.androidpart.domain.model.CameraIntrinsics
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -16,6 +19,7 @@ class SettingsDataStore(private val context: Context) {
         val KEY_RESOLUTION = stringPreferencesKey("resolution")
         val KEY_FPS = intPreferencesKey("fps")
         val KEY_MARKER_SIZE = floatPreferencesKey("markerSize")
+        val KEY_CALIB_RESOLUTION = stringPreferencesKey("calib_resolution")
         val KEY_CAMERA_MATRIX = stringPreferencesKey("camera_matrix")
         val KEY_DIST_COEFFS = stringPreferencesKey("dist_coeffs")
         val KEY_MODELS_HASH = stringPreferencesKey("models_hash")
@@ -35,10 +39,11 @@ class SettingsDataStore(private val context: Context) {
         }
     }
 
-    suspend fun saveCalibration(cameraMatrix: String, distCoeffs: String) {
+    suspend fun saveCalibration(cameraMatrix: String, distCoeffs: String, calibRes: String) {
         context.dataStore.edit { preferences ->
             preferences[KEY_CAMERA_MATRIX] = cameraMatrix
             preferences[KEY_DIST_COEFFS] = distCoeffs
+            preferences[KEY_CALIB_RESOLUTION] = calibRes
         }
     }
 
@@ -59,11 +64,28 @@ class SettingsDataStore(private val context: Context) {
 
 
     // CALIBRATION FLOW
-    val calibrationFlow: Flow<Pair<String?, String?>> = context.dataStore.data
-        .map { preferences ->
-            val matrix = preferences[KEY_CAMERA_MATRIX]
-            val dist = preferences[KEY_DIST_COEFFS]
 
-            matrix to dist
-    }
+    val calibrationFlow: Flow<CameraIntrinsics?> = context.dataStore.data
+        .map { preferences ->
+
+            val matrixStr = preferences[KEY_CAMERA_MATRIX]
+            val distStr = preferences[KEY_DIST_COEFFS]
+            val resStr = preferences[KEY_CALIB_RESOLUTION]
+
+            if (matrixStr == null || distStr == null || resStr == null) return@map null
+
+            val matrix = parseStringMatrix(matrixStr)
+            val dist = parseStringList(distStr)
+
+            val (w, h) = resStr.split("x").let {
+                it[0].toFloat() to it[1].toFloat()
+            }
+
+            CameraIntrinsics(
+                cameraMatrix = matrix,
+                distCoeffs = dist,
+                calibWidth = w,
+                calibHeight = h
+            )
+        }
 }
