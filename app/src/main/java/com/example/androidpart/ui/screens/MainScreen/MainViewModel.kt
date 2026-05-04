@@ -24,7 +24,7 @@ import kotlinx.serialization.json.jsonObject
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val context = application.applicationContext
-    private val settings = SettingsDataStore(context)
+    val settingsDataStore = SettingsDataStore(context)
 
     // Экземпляр движка живет здесь и не пересоздается при повороте
     val engine: FilamentEngine by lazy { FilamentEngine(context) }
@@ -37,9 +37,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _currentFrame = MutableStateFlow<Bitmap?>(null)
     val currentFrame: StateFlow<Bitmap?> = _currentFrame.asStateFlow()
+    private val _cameraMatrix = MutableStateFlow<List<List<Double>>?>(null)
+    val cameraMatrix = _cameraMatrix.asStateFlow()
 
     init {
         initNetworkAndData()
+        observeCalibration()
+    }
+
+    private fun observeCalibration() {
+        viewModelScope.launch {
+            // Слушаем изменения калибровки
+            settingsDataStore.calibrationFlow.collect { (matrixStr, _) ->
+
+                matrixStr?.let {
+                    _cameraMatrix.value = parseStringMatrix(it)
+                    // Больше здесь ничего не вызываем!
+                }
+            }
+        }
     }
 
     private fun initNetworkAndData() {
@@ -66,8 +82,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             // 2. Получаем калибровку и отправляем INIT
             try {
-                val calibration = settings.calibrationFlow.first()
-                val currentSettings = settings.settingsFlow.first()
+                val calibration = settingsDataStore.calibrationFlow.first()
+                val currentSettings = settingsDataStore.settingsFlow.first()
 
                 val matrixStr = calibration.first
                 val distStr = calibration.second

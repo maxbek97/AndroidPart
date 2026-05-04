@@ -34,6 +34,9 @@ import com.example.androidpart.ui.screens.CalibrationScreen.opencv.ChessboardDet
 import org.opencv.core.MatOfPoint2f
 import org.opencv.core.Size
 import android.util.Log
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import com.example.androidpart.data.local.SettingsDataStore
 import kotlinx.coroutines.launch
@@ -44,38 +47,59 @@ fun CalibrationScreen(navController: NavHostController) {
 
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val scope = rememberCoroutineScope()
 
     val detector = remember { ChessboardDetector() }
     val calibrationManager = remember { CalibrationManager() }
     val cameraController = remember { CameraController() }
+    val settingsDataStore = remember { SettingsDataStore(context) }
 
+    val settings by settingsDataStore.settingsFlow.collectAsState(initial = null)
+
+    val targetSize = remember(settings) {
+        settings?.first?.split("x")?.let {
+            android.util.Size(it[0].toInt(), it[1].toInt())
+        }
+    }
     var detected by remember { mutableStateOf(false) }
     var currentCorners by remember { mutableStateOf<MatOfPoint2f?>(null) }
-
     var photosTaken by remember { mutableStateOf(0) }
     val requiredPhotos = 15
-    val settingsDataStore = remember { SettingsDataStore(context) }
-    val scope = rememberCoroutineScope()
+
+    val previewView = remember { PreviewView(context) }
+    val analyzer = remember {
+        FrameAnalyzer(detector) { result ->
+            detected = result.found
+            currentCorners = result.corners
+        }
+    }
+
+    LaunchedEffect(targetSize) {
+        // ЗАПУСКАЕМ ТОЛЬКО КОГДА ЕСТЬ РЕАЛЬНЫЙ РАЗМЕР
+        if (targetSize != null) {
+            Log.d("CALIB_DEBUG", "Starting calibration camera with target: ${targetSize.width}x${targetSize.height}")
+            cameraController.bind(
+                context = context,
+                previewView = previewView,
+                lifecycleOwner = lifecycleOwner,
+                analyzer = analyzer,
+                targetSize = targetSize
+            )
+        }
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            Log.d("CALIB_DEBUG", "Cleaning up CameraController")
+            cameraController.shutdown()
+        }
+    }
+
+    // Добавляем эффект, который перезапускает камеру с нужным размером
 
     Box(modifier = Modifier.fillMaxSize()) {
 
         AndroidView(
-            factory = { ctx ->
-                PreviewView(ctx).apply {
-
-                    val analyzer = FrameAnalyzer(detector) { result ->
-                        detected = result.found
-                        currentCorners = result.corners
-                    }
-
-                    cameraController.bind(
-                        ctx,
-                        this,
-                        lifecycleOwner,
-                        analyzer
-                    )
-                }
-            },
+            factory = { previewView },
             modifier = Modifier.fillMaxSize()
         )
 
@@ -109,46 +133,31 @@ fun CalibrationScreen(navController: NavHostController) {
                     .clip(CircleShape)
                     .background(if (detected) Color.White else Color.Gray)
                     .clickable {
+                        val size = targetSize
+                        if (!detected || currentCorners == null || size == null) return@clickable
 
-                        if (!detected || currentCorners == null) return@clickable
 
                         calibrationManager.addFrame(currentCorners!!)
                         photosTaken++
 
                         if (photosTaken >= requiredPhotos) {
+                            val calibrationSize = Size(targetSize.width.toDouble(), targetSize.height.toDouble())
+                            val (cameraMatrix, distCoeffs) = calibrationManager.calibrate(calibrationSize)
 
-                            val (cameraMatrix, distCoeffs) =
-                                calibrationManager.calibrate(Size(640.0, 480.0))
-
-                            logCalibration(cameraMatrix, distCoeffs)
 
                             scope.launch {
                                 settingsDataStore.saveCalibration(
                                     matToString(cameraMatrix),
                                     matToString(distCoeffs)
                                 )
+                                calibrationManager.clear()
+                                navController.popBackStack()
                             }
-
-                            calibrationManager.clear()
-                            navController.popBackStack()
                         }
                     }
             )
         }
     }
-}
-
-
-private fun logCalibration(cameraMatrix: Mat, distCoeffs: Mat) {
-
-    Log.d("CALIB", "=== CAMERA MATRIX ===")
-
-    for (i in 0 until cameraMatrix.rows()) {
-        Log.d("CALIB", cameraMatrix.row(i).dump())
-    }
-
-    Log.d("CALIB", "=== DIST COEFFS ===")
-    Log.d("CALIB", distCoeffs.dump())
 }
 
 private fun matToString(mat: Mat): String {

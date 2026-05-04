@@ -50,7 +50,7 @@ class SettingsDataStore(private val context: Context) {
     }
     val settingsFlow: Flow<Triple<String, Int, Float>> = context.dataStore.data
         .map { preferences ->
-            val res = preferences[KEY_RESOLUTION] ?: "1080x1200"
+            val res = preferences[KEY_RESOLUTION] ?: "640x480"
             val fps = preferences[KEY_FPS] ?: 60
             val markerSize = preferences[KEY_MARKER_SIZE] ?: 0.05f
 

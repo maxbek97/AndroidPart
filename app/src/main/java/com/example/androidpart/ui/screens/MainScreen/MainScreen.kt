@@ -30,10 +30,17 @@ fun MainScreen(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val engine = viewModel.engine
 
+    val settings by viewModel.settingsDataStore.settingsFlow.collectAsState(initial = Triple("640x480", 60, 0.05f))
+    val (fW, fH) = remember(settings.first) {
+        val parts = settings.first.split("x")
+        parts[0].toFloat() to parts[1].toFloat()
+    }
+
+    val engine = viewModel.engine
     val markers by viewModel.markers.collectAsState()
     val currentFrame by viewModel.currentFrame.collectAsState()
+    val cameraMatrix by viewModel.cameraMatrix.collectAsState()
 
     LaunchedEffect(engine) {
         while (true) {
@@ -45,7 +52,6 @@ fun MainScreen(
 
     val activity = context as? Activity
 
-    val targetSize = Size(1080, 1080)
 
     DisposableEffect(Unit) {
         val window = activity?.window
@@ -58,11 +64,12 @@ fun MainScreen(
     }
 
     val previewView = rememberCameraPreviewView(context)
-    LaunchedEffect(Unit) {
+    LaunchedEffect(fW, fH) {
+        Log.d("AR_CHECK", "Restarting camera with target: ${fW}x${fH}")
         bindCamera(context,
             lifecycleOwner,
             previewView,
-            targetSize,
+            targetSize = Size(fW.toInt(), fH.toInt()),
             viewModel.wsClient) { bitmap ->
             viewModel.updateFrame(bitmap)
         }
@@ -91,7 +98,10 @@ fun MainScreen(
                 markers = markers,
                 frame = currentFrame,
                 engine = engine,
-                eye = Eye.LEFT
+                eye = Eye.LEFT,
+                frameWidth = fW,  // Передаем напрямую
+                frameHeight = fH,
+                cameraMatrix = cameraMatrix
             )
 
             // Правый глаз
@@ -100,7 +110,10 @@ fun MainScreen(
                 markers = markers,
                 frame = currentFrame,
                 engine = engine,
-                eye = Eye.RIGHT
+                eye = Eye.RIGHT,
+                frameWidth = fW,  // Передаем напрямую
+                frameHeight = fH,
+                cameraMatrix = cameraMatrix
             )
 
         }

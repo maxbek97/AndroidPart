@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -24,8 +25,24 @@ fun ArEyeContainer(
     markers: List<ArMarker>,
     frame: Bitmap?,
     engine: FilamentEngine,
-    eye: Eye
+    eye: Eye,
+    frameWidth: Float,  // FallBack
+    frameHeight: Float,
+    cameraMatrix: List<List<Double>>?
 ) {
+    val actualWidth = frame?.width?.toFloat() ?: frameWidth
+    val actualHeight = frame?.height?.toFloat() ?: frameHeight
+
+    // Добавь этот Side Effect для отладки
+    LaunchedEffect(actualWidth, actualHeight, frameWidth, frameHeight) {
+        Log.d("AR_DEBUG_DIMENS", """
+        [EYE: $eye] 
+        Settings (Calib): ${frameWidth}x${frameHeight}
+        Actual Bitmap: ${actualWidth}x${actualHeight}
+        Scale Diff: X:${actualWidth/frameWidth} Y:${actualHeight/frameHeight}
+    """.trimIndent())
+    }
+
     Box(modifier = modifier.fillMaxHeight().background(Color.Blue)) {
 
         //Слой 0, слой камеры
@@ -41,12 +58,20 @@ fun ArEyeContainer(
         FilamentView(
             markers = markers,
             engine = engine,
-            eye = eye
+            eye = eye,
+            frameWidth = actualWidth,
+            frameHeight = actualHeight,
+            cameraMatrix = cameraMatrix,
+            calibWidth = frameWidth,
+            calibHeight = frameHeight
         )
 
         // Слой 2: 2D Текст и рамки (самый верхний)
         ArOverlayView(
-            markers = markers
+            modifier = Modifier.fillMaxSize(),
+            markers = markers,
+            frameWidth = actualWidth,
+            frameHeight = actualHeight
         )
     }
 }

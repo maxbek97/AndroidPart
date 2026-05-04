@@ -6,50 +6,60 @@ import android.graphics.Paint
 import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
+import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
+import com.example.androidpart.domain.ar.getScaleFactors
 import com.example.androidpart.domain.model.ArMarker
 import com.example.androidpart.domain.model.MarkerPayload
 
 @Composable
 fun ArOverlayView(
     modifier: Modifier = Modifier,
-    markers: List<ArMarker>
+    markers: List<ArMarker>,
+    frameWidth: Float = 640f,
+    frameHeight: Float = 480f
 ) {
-    // Важно: мы знаем, что входной кадр 1080x1080
-    val frameWidth = 1080f
-    val frameHeight = 1080f
-
+    LaunchedEffect(frameWidth, frameHeight) {
+        Log.d("AR_DEBUG_OVERLAY", "Overlay configured for Frame: ${frameWidth}x${frameHeight}")
+    }
     Canvas(modifier = modifier.fillMaxSize()) {
+
         val canvasWidth = size.width
         val canvasHeight = size.height
+        // ПРИМЕНЯЕМ ТВОЮ ФУНКЦИЮ
+        val (scale, offset) = getScaleFactors(
+            contentWidth = frameWidth,
+            contentHeight = frameHeight,
+            viewWidth = canvasWidth,
+            viewHeight = canvasHeight
+        )
 
-        val scale = maxOf(canvasWidth / frameWidth, canvasHeight / frameHeight)
-        val offsetX = (canvasWidth - frameWidth * scale) / 2f
-        val offsetY = (canvasHeight - frameHeight * scale) / 2f
 
         markers.forEach { marker ->
             // Отрисовка рамок (corners)
             val corners = marker.corners.firstOrNull() ?: return@forEach
             // Трансформируем все 4 угла сразу
-            val p0x = corners[0][0] * scale + offsetX
-            val p0y = corners[0][1] * scale + offsetY
-            val p1x = corners[1][0] * scale + offsetX
-            val p1y = corners[1][1] * scale + offsetY
-            val p2x = corners[2][0] * scale + offsetX
-            val p2y = corners[2][1] * scale + offsetY
-            val p3x = corners[3][0] * scale + offsetX
-            val p3y = corners[3][1] * scale + offsetY
+            val p0x = corners[0][0] * scale + offset.x
+            val p0y = corners[0][1] * scale + offset.y
+            val p1x = corners[1][0] * scale + offset.x
+            val p1y = corners[1][1] * scale + offset.y
+            val p2x = corners[2][0] * scale + offset.x
+            val p2y = corners[2][1] * scale + offset.y
+            val p3x = corners[3][0] * scale + offset.x
+            val p3y = corners[3][1] * scale + offset.y
 
             val lineLength = 40f
             val cornerStrokeWidth = 6f
-            val cornerColor = androidx.compose.ui.graphics.Color.White
+            val cornerColor = Color.White
 
             fun drawCorner(x: Float, y: Float, dx: Float, dy: Float) {
                 drawLine(cornerColor, Offset(x, y), Offset(x + dx * lineLength, y), cornerStrokeWidth)

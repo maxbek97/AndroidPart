@@ -19,7 +19,7 @@ object CameraUtils {
             val sizes = map?.getOutputSizes(ImageFormat.YUV_420_888) ?: return emptyList()
 
             // Настраиваем фильтры
-            val maxPixels = 1920 * 1080 // Ограничение Full HD
+            val maxPixels = 1088 * 1088 // Ограничение Full HD
             val minPixels = 320 * 240  // Отсекаем совсем мелкие
 
             sizes.forEach { size ->
@@ -30,7 +30,6 @@ object CameraUtils {
                 val label = when {
                     aspect in 0.95f..1.05f -> "1:1"
                     aspect in 1.32f..1.35f -> "4:3"
-                    aspect in 1.76f..1.79f -> "16:9"
                     else -> null // Игнорируем остальные (например, 21:9)
                 }
 
