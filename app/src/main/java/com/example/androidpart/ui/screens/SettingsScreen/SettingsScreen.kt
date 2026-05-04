@@ -20,9 +20,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import com.example.androidpart.R
 import com.example.androidpart.data.local.SettingsDataStore
+import com.example.androidpart.domain.model.Resolution
 import com.example.androidpart.ui.components.DropdownSelector
 import com.example.androidpart.ui.components.MarkerSizeInput
 import com.example.androidpart.ui.components.SettingDescription
+import com.example.androidpart.ui.components.camera.CameraUtils
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -31,28 +33,24 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(navController: NavHostController) {
     val context = LocalContext.current
     val sessionManager = remember { SessionManager(context) }
-    val metrics = context.resources.displayMetrics
     val settingsDataStore = remember { SettingsDataStore(context) }
     val scope = rememberCoroutineScope()
     val fpsOptions = listOf(24, 30, 60)
 
 
-    val resolutions = remember {
-        getAvailableRes(
-            metrics.widthPixels,
-            metrics.heightPixels
-        )
-    }
+    val resolutions = remember { CameraUtils.getFilteredResolutions(context) }
 
     var markerInput by remember { mutableStateOf("0.05") }
     var selectedMarkerSize by remember { mutableStateOf(0.05f) } // 5 см по умолчанию
-    var selectedResolution by remember { mutableStateOf(resolutions.first()) }
+    var selectedResolution by remember {
+        mutableStateOf(resolutions.firstOrNull() ?: Resolution(640, 480, "4:3"))
+    }
     var selectedFps by remember { mutableStateOf(fpsOptions.first()) }
     var saveJob by remember { mutableStateOf<Job?>(null) }
 
     LaunchedEffect(Unit) {
-        settingsDataStore.settingsFlow.collect { (res, fps, markerSize) ->
-            val resObj = resolutions.find { it.toString() == res}
+        settingsDataStore.settingsFlow.collect { (resStr, fps, markerSize) ->
+            val resObj = resolutions.find { it.toString() == resStr}
             if (resObj != null ) selectedResolution = resObj
             if (fpsOptions.contains(fps)) selectedFps = fps
             if (markerSize != selectedMarkerSize) {
@@ -87,13 +85,14 @@ fun SettingsScreen(navController: NavHostController) {
         ) {
             // ---------- РАЗРЕШЕНИЕ ----------
             SettingDescription(
-                "Разрешение изображения для одного глаза (VR)"
+                "Разрешение кадра детекции (AR)"
             )
 
             DropdownSelector(
                 label = "Разрешение",
                 options = resolutions,
                 selected = selectedResolution,
+                itemLabel = { it.toDisplayString() },
                 onSelected = { newRes ->
                     selectedResolution = newRes
                     // Сохраняем через coroutineScope

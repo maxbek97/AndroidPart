@@ -12,7 +12,9 @@ fun <T> DropdownSelector(
     label: String,
     options: List<T>,
     selected: T,
-    onSelected: (T) -> Unit
+    onSelected: (T) -> Unit,
+    // Добавляем параметр для кастомного отображения текста
+    itemLabel: (T) -> String = { it.toString() }
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -21,7 +23,8 @@ fun <T> DropdownSelector(
         onExpandedChange = { expanded = !expanded }
     ) {
         TextField(
-            value = selected.toString(),
+            // Используем itemLabel для отображения в поле ввода
+            value = itemLabel(selected),
             onValueChange = {},
             readOnly = true,
             label = {
@@ -29,7 +32,7 @@ fun <T> DropdownSelector(
                     label,
                     color = Color.LightGray
                 )
-                    },
+            },
             modifier = Modifier
                 .menuAnchor()
                 .fillMaxWidth(),
@@ -47,11 +50,12 @@ fun <T> DropdownSelector(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
-            options.forEach {
+            options.forEach { option ->
                 DropdownMenuItem(
-                    text = { Text(it.toString()) },
+                    // Используем itemLabel для отображения пунктов списка
+                    text = { Text(itemLabel(option)) },
                     onClick = {
-                        onSelected(it)
+                        onSelected(option)
                         expanded = false
                     }
                 )
