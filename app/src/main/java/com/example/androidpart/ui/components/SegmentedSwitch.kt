@@ -19,7 +19,6 @@ fun SegmentedSwitch(
     selectedFirst: Boolean,
     onSelect: (Boolean) -> Unit
 ) {
-    val bg = Color(0xFF1F1F1F)
     val selectedColor = Color(0xFF3F51B5)
     val textColor = Color.White
 

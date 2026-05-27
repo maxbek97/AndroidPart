@@ -35,7 +35,6 @@ fun ArOverlayView(
 
         val canvasWidth = size.width
         val canvasHeight = size.height
-        // ПРИМЕНЯЕМ ТВОЮ ФУНКЦИЮ
         val (scale, offset) = getScaleFactors(
             contentWidth = frameWidth,
             contentHeight = frameHeight,
@@ -47,7 +46,7 @@ fun ArOverlayView(
         markers.forEach { marker ->
             // Отрисовка рамок (corners)
             val corners = marker.corners.firstOrNull() ?: return@forEach
-            // Трансформируем все 4 угла сразу
+
             val p0x = corners[0][0] * scale + offset.x
             val p0y = corners[0][1] * scale + offset.y
             val p1x = corners[1][0] * scale + offset.x
@@ -76,7 +75,7 @@ fun ArOverlayView(
             if (marker.payload is MarkerPayload.Text) {
                 val text = marker.payload.value.value
 
-                // Вычисляем центр (среднее арифметическое координат)
+                // Вычисляем центр
                 val centerX = (p0x + p1x + p2x + p3x) / 4f
                 val centerY = (p0y + p1y + p2y + p3y) / 4f
 
@@ -113,7 +112,7 @@ fun ArOverlayView(
                     .setAlignment(Layout.Alignment.ALIGN_CENTER)
                     .build()
 
-// Центрируем по вертикали
+                // Центрируем по вертикали
                 val totalHeight = layoutFill.height
                 drawContext.canvas.nativeCanvas.translate(0f, -totalHeight / 2f)
 
@@ -122,9 +121,6 @@ fun ArOverlayView(
                 layoutFill.draw(drawContext.canvas.nativeCanvas)
 
                 drawContext.canvas.nativeCanvas.restore()
-
-
-
             }
         }
     }

@@ -1,4 +1,4 @@
-package com.example.androidpart.core.math
+package com.example.androidpart.core.utils
 
 import android.util.Log
 

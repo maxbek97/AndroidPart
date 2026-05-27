@@ -1,7 +1,6 @@
 package com.example.androidpart.data.remote
 import com.example.androidpart.domain.model.*
 
-// Репозиторий принимает интерфейс ApiService
 class AuthRepository(
     private val api: AuthApiService
 ) {
@@ -18,14 +17,13 @@ class AuthRepository(
             val response = api.register(dto)
 
             if (response.isSuccessful && response.body() != null) {
-                // Успешный ответ (200 OK)
+                // Успех
                 Result.success(response.body()!!.message)
             } else {
-                // Ошибка бэкенда (например, 400 Bad Request)
+                // Ошибка бэкенда
                 Result.failure(Exception(response.errorBody()?.string() ?: "Ошибка регистрации"))
             }
         } catch (e: Exception) {
-            // Ошибка сети (например, таймаут, нет интернета)
             Result.failure(e)
         }
 
@@ -35,14 +33,11 @@ class AuthRepository(
             val response = api.login(dto)
 
             if (response.isSuccessful && response.body() != null) {
-                // Успешный ответ (200 OK)
                 Result.success(response.body()!!)
             } else {
-                // Ошибка бэкенда (например, 401 Unauthorized)
                 Result.failure(Exception(response.errorBody()?.string() ?: "Ошибка входа"))
             }
         } catch (e: Exception) {
-            // Ошибка сети
             Result.failure(e)
         }
 }

@@ -40,7 +40,6 @@ fun MarkerSizeInput(
             .fillMaxWidth()
             .onFocusChanged { focusState ->
                 if (isFocused && !focusState.isFocused) {
-                    // 👇 вот тут onFocusLost
                     onFocusLost(value)
                 }
                 isFocused = focusState.isFocused

@@ -18,7 +18,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import com.example.androidpart.rendering.filament.Eye
+import com.example.androidpart.domain.ar.Eye
 import com.example.androidpart.ui.components.ar.ArEyeContainer
 import com.example.androidpart.ui.components.camera.bindCamera
 import com.example.androidpart.ui.components.camera.rememberCameraPreviewView

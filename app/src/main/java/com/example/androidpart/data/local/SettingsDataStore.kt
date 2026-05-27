@@ -4,8 +4,8 @@ import android.content.Context
 
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
-import com.example.androidpart.core.math.parseStringList
-import com.example.androidpart.core.math.parseStringMatrix
+import com.example.androidpart.core.utils.parseStringList
+import com.example.androidpart.core.utils.parseStringMatrix
 import com.example.androidpart.domain.model.CameraIntrinsics
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -25,12 +25,12 @@ class SettingsDataStore(private val context: Context) {
         val KEY_MODELS_HASH = stringPreferencesKey("models_hash")
     }
 
+//    Save
     suspend fun saveModelsHash(hash: String) {
         context.dataStore.edit {
             it[KEY_MODELS_HASH] = hash
         }
     }
-    // Сохраняем данные
     suspend fun saveSettings(resolution: String, fps: Int, markerSize: Float) {
         context.dataStore.edit { preferences ->
             preferences[KEY_RESOLUTION] = resolution
@@ -38,7 +38,6 @@ class SettingsDataStore(private val context: Context) {
             preferences[KEY_MARKER_SIZE] = markerSize
         }
     }
-
     suspend fun saveCalibration(cameraMatrix: String, distCoeffs: String, calibRes: String) {
         context.dataStore.edit { preferences ->
             preferences[KEY_CAMERA_MATRIX] = cameraMatrix
@@ -47,7 +46,7 @@ class SettingsDataStore(private val context: Context) {
         }
     }
 
-    // Читаем данные
+    // Read
     suspend fun getModelsHash(): String? {
         return context.dataStore.data
             .map { it[KEY_MODELS_HASH] }
@@ -61,9 +60,6 @@ class SettingsDataStore(private val context: Context) {
 
             Triple(res, fps, markerSize)
         }
-
-
-    // CALIBRATION FLOW
 
     val calibrationFlow: Flow<CameraIntrinsics?> = context.dataStore.data
         .map { preferences ->

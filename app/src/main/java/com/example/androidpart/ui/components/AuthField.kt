@@ -61,8 +61,8 @@ fun AuthField(
                 nextFocusRequester?.requestFocus()
             },
             onDone = {
-                focusManager.clearFocus()      // 🔥 снимаем фокус
-                keyboardController?.hide()     // 🔥 скрываем клавиатуру
+                focusManager.clearFocus()
+                keyboardController?.hide()
             }
         )
     )

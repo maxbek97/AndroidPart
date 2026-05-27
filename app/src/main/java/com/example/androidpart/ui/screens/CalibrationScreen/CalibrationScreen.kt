@@ -78,7 +78,7 @@ fun CalibrationScreen(navController: NavHostController) {
     }
 
     LaunchedEffect(targetSize) {
-        // ЗАПУСКАЕМ ТОЛЬКО КОГДА ЕСТЬ РЕАЛЬНЫЙ РАЗМЕР
+        // запускаем, только когда есть реальный размер
         if (targetSize != null) {
             Log.d("CALIB_DEBUG", "Starting calibration camera with target: ${targetSize.width}x${targetSize.height}")
             cameraController.bind(
@@ -96,8 +96,6 @@ fun CalibrationScreen(navController: NavHostController) {
             cameraController.shutdown()
         }
     }
-
-    // Добавляем эффект, который перезапускает камеру с нужным размером
 
     Box(modifier = Modifier.fillMaxSize()) {
 

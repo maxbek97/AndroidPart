@@ -19,18 +19,18 @@ object CameraUtils {
             val sizes = map?.getOutputSizes(ImageFormat.YUV_420_888) ?: return emptyList()
 
             // Настраиваем фильтры
-            val maxPixels = 1088 * 1088 // Ограничение Full HD
-            val minPixels = 320 * 240  // Отсекаем совсем мелкие
+            val maxPixels = 1088 * 1088 // Ограничение верхнее, чтоб не перегружать матрицу камеры и сам телефон
+            val minPixels = 320 * 240  // нижняя граница
 
             sizes.forEach { size ->
                 val pixels = size.width * size.height
                 val aspect = size.width.toFloat() / size.height.toFloat()
 
-                // Определяем соотношение с небольшой погрешностью
+
                 val label = when {
                     aspect in 0.95f..1.05f -> "1:1"
                     aspect in 1.32f..1.35f -> "4:3"
-                    else -> null // Игнорируем остальные (например, 21:9)
+                    else -> null
                 }
 
                 if (label != null && pixels in minPixels..maxPixels) {

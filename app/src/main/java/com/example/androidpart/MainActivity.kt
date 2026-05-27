@@ -15,7 +15,6 @@ class MainActivity : ComponentActivity() {
 
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-            // можно лог или обработку
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {

@@ -13,7 +13,6 @@ fun <T> DropdownSelector(
     options: List<T>,
     selected: T,
     onSelected: (T) -> Unit,
-    // Добавляем параметр для кастомного отображения текста
     itemLabel: (T) -> String = { it.toString() }
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -52,7 +51,6 @@ fun <T> DropdownSelector(
         ) {
             options.forEach { option ->
                 DropdownMenuItem(
-                    // Используем itemLabel для отображения пунктов списка
                     text = { Text(itemLabel(option)) },
                     onClick = {
                         onSelected(option)

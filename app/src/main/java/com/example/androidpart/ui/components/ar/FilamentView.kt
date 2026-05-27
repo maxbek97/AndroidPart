@@ -6,17 +6,14 @@ import android.view.SurfaceView
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
-import com.example.androidpart.data.local.ModelManager
-import com.example.androidpart.domain.ar.PoseMapper
 import com.example.androidpart.domain.model.ArMarker
 import com.example.androidpart.domain.model.CameraIntrinsics
 import com.example.androidpart.domain.model.MarkerPayload
-import com.example.androidpart.rendering.filament.Eye
-import com.example.androidpart.rendering.filament.FilamentEngine
+import com.example.androidpart.domain.ar.Eye
+import com.example.androidpart.domain.ar.FilamentEngine
 import java.io.File
 
 @Composable

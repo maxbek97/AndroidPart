@@ -24,7 +24,7 @@ fun ErrorScreen(
     title: String = "Ошибка",
     message: String
 ) {
-    // --- Анимация появления контента ---
+    // анимация появления
     val appearanceProgress = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
         appearanceProgress.animateTo(
@@ -33,7 +33,7 @@ fun ErrorScreen(
         )
     }
 
-    // --- Анимация "левитации" робота ---
+    // анимация плавающего робота
     val infiniteTransition = rememberInfiniteTransition(label = "robotFloat")
     val floatOffset by infiniteTransition.animateFloat(
         initialValue = -2f,
@@ -62,7 +62,7 @@ fun ErrorScreen(
             )
         }
 
-        // Заголовок с анимацией появления
+        // Заголовок
         Text(
             text = title,
             fontSize = 28.sp,
@@ -90,7 +90,7 @@ fun ErrorScreen(
             )
         }
 
-        // Картинка робота с двойной анимацией
+        // Картинка робота
         Image(
             painter = painterResource(id = R.drawable.chill_bot),
             contentDescription = null,

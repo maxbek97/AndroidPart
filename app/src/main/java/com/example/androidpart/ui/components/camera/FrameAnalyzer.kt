@@ -27,20 +27,19 @@ class FrameAnalyzer(
     override fun analyze(image: ImageProxy) {
         val now = System.currentTimeMillis()
 
-        if (now - lastTime < 100) { // ~10 FPS
+        if (now - lastTime < 100) {
             image.close()
             return
         }
         try {
             val bitmap = image.toBitmap()
-        // 1. Создаем Bitmap для отображения в "глазах"
+            // 1. Создаем Bitmap
             onFrameConverted(bitmap) // Отправляем в UI
-
             val outputStream = ByteArrayOutputStream()
             // 80 - хороший баланс между качеством ArUco и размером пакета
             bitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
             val jpegBytes = outputStream.toByteArray()
-            // 4. Кодируем в Base64 (NO_WRAP критичен для корректного парсинга в Python)
+
             val base64Image = Base64.encodeToString(jpegBytes, Base64.NO_WRAP)
             val payload: WsMessage = WsMessage.Frame(
                 frame_id = frameCounter++,

@@ -1,9 +1,9 @@
-package com.example.androidpart.rendering.filament
+package com.example.androidpart.domain.ar
 
 import android.content.Context
+import android.opengl.Matrix
 import android.util.Log
 import android.view.Surface
-import com.example.androidpart.domain.ar.PoseMapper
 import com.example.androidpart.domain.model.ArMarker
 import com.example.androidpart.domain.model.MarkerPayload
 import com.example.androidpart.domain.model.ModelData
@@ -218,7 +218,7 @@ class FilamentEngine(context: Context) {
         Log.d("AR_POSE_DEBUG", "TVEC: ${marker.tvec}, RVEC: ${marker.rvec}")
         val localMatrix = getLocalTransform(modelData)
         val targetMatrix = FloatArray(16)
-        android.opengl.Matrix.multiplyMM(targetMatrix, 0, markerMatrix, 0, localMatrix, 0)
+        Matrix.multiplyMM(targetMatrix, 0, markerMatrix, 0, localMatrix, 0)
         //android.opengl.Matrix.rotateM(targetMatrix, 0, 270f, 1f, 0f, 0f)
 
 
@@ -234,14 +234,14 @@ class FilamentEngine(context: Context) {
         // Используем src как ключ, так как для одного файла настройки всегда одинаковые
         return localTransformCache.getOrPut(modelData.src) {
             val localMatrix = FloatArray(16)
-            android.opengl.Matrix.setIdentityM(localMatrix, 0)
+            Matrix.setIdentityM(localMatrix, 0)
 
             // Порядок в Unity: Translate -> Rotate -> Scale
             // В OpenGL (Matrix.multiply) он будет обратным при умножении,
             // но эти методы модифицируют текущую матрицу последовательно:
 
             // 1. Смещение
-            android.opengl.Matrix.translateM(
+            Matrix.translateM(
                 localMatrix, 0,
                 modelData.start_position.getOrElse(0) { 0f },
                 modelData.start_position.getOrElse(1) { 0f },
@@ -252,12 +252,12 @@ class FilamentEngine(context: Context) {
             val rx = modelData.rotation.getOrElse(0) { 0f }
             val ry = modelData.rotation.getOrElse(1) { 0f }
             val rz = modelData.rotation.getOrElse(2) { 0f }
-            if (rx != 0f) android.opengl.Matrix.rotateM(localMatrix, 0, rx, 1f, 0f, 0f)
-            if (ry != 0f) android.opengl.Matrix.rotateM(localMatrix, 0, ry, 0f, 1f, 0f)
-            if (rz != 0f) android.opengl.Matrix.rotateM(localMatrix, 0, rz, 0f, 0f, 1f)
+            if (rx != 0f) Matrix.rotateM(localMatrix, 0, rx, 1f, 0f, 0f)
+            if (ry != 0f) Matrix.rotateM(localMatrix, 0, ry, 0f, 1f, 0f)
+            if (rz != 0f) Matrix.rotateM(localMatrix, 0, rz, 0f, 0f, 1f)
 
             // 3. Масштаб
-            android.opengl.Matrix.scaleM(
+            Matrix.scaleM(
                 localMatrix, 0,
                 modelData.scale.getOrElse(0) { 1f },
                 modelData.scale.getOrElse(1) { 1f },

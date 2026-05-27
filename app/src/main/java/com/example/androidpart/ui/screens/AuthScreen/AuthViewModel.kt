@@ -35,8 +35,49 @@ class AuthViewModel(
         password: String,
         email: String
     ) {
-        viewModelScope.launch {
 
+        viewModelScope.launch {
+            val loginError =
+                AuthValidator.validateLogin(login)
+
+            if (loginError != null) {
+                _events.emit(
+                    AuthEvent.ShowMessage(
+                        loginError,
+                        isError = true
+                    )
+                )
+                return@launch
+            }
+            val emailError =
+                AuthValidator.validateEmail(email)
+
+            if (emailError != null) {
+
+                _events.emit(
+                    AuthEvent.ShowMessage(
+                        emailError,
+                        isError = true
+                    )
+                )
+
+                return@launch
+            }
+
+            val passwordError =
+                AuthValidator.validatePassword(password)
+
+            if (passwordError != null) {
+
+                _events.emit(
+                    AuthEvent.ShowMessage(
+                        passwordError,
+                        isError = true
+                    )
+                )
+
+                return@launch
+            }
             _uiState.value = AuthUiState.Loading
 
             val dto = RegisterRequest(
@@ -47,7 +88,14 @@ class AuthViewModel(
 
             authRepository.register(dto)
                 .onSuccess {
-                    _uiState.value = AuthUiState.RegistrationSuccess
+                    _uiState.value = AuthUiState.Idle
+                    _events.emit(
+                        AuthEvent.ShowMessage(
+                            "Регистрация прошла успешно",
+                            isError = false
+                        )
+                    )
+
                 }
                 .onFailure { e ->
                     handleError(e)
@@ -61,19 +109,48 @@ class AuthViewModel(
     ) {
 
         viewModelScope.launch {
-            if (email == "test@local" && password == "12345") {
-                // Сразу считаем пользователя авторизованным
-                sessionManager.saveToken("FAKE_TOKEN_FOR_TESTING")
-                _events.emit(AuthEvent.NavigateToMenu)
+            val emailError =
+                AuthValidator.validateEmail(email)
+
+            if (emailError != null) {
+
+                _events.emit(
+                    AuthEvent.ShowMessage(
+                        emailError,
+                        isError = true
+                    )
+                )
+
                 return@launch
             }
+
+            val passwordError =
+                AuthValidator.validatePassword(password)
+
+            if (passwordError != null) {
+
+                _events.emit(
+                    AuthEvent.ShowMessage(
+                        passwordError,
+                        isError = true
+                    )
+                )
+
+                return@launch
+            }
+
             _uiState.value = AuthUiState.Loading
 
             authRepository.login(LoginRequest(email, password))
                 .onSuccess { response ->
-
-                    // сохраняем accessToken
+                    _uiState.value = AuthUiState.Idle
                     sessionManager.saveToken(response.accessToken)
+                    _events.emit(
+                        AuthEvent.ShowMessage(
+                            "Добро пожаловать",
+                            isError = false
+                        )
+                    )
                     _events.emit(AuthEvent.NavigateToMenu)
                 }
                 .onFailure { e ->
@@ -81,8 +158,6 @@ class AuthViewModel(
                 }
         }
     }
-    // ===== ERROR HANDLER ===== Сюда нужно добавить обработки ошибок,
-    // чтоб нормальный сообщения вызывались
     private suspend fun handleError(e: Throwable) {
         val message = e.message ?: "Ошибка"
 
@@ -95,7 +170,12 @@ class AuthViewModel(
         ) {
             _events.emit(AuthEvent.NavigateToError("Сервер недоступен"))
         } else {
-            _uiState.value = AuthUiState.Error(message)
+            _events.emit(
+                AuthEvent.ShowMessage(
+                    message = message,
+                    isError = true
+                )
+            )
         }
     }
 }

@@ -77,7 +77,7 @@ fun AuthScreen(navController: NavHostController) {
 
         VideoBackground()
 
-        // затемнение
+        // затемненный бэк
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -102,7 +102,7 @@ fun AuthScreen(navController: NavHostController) {
             verticalArrangement = Arrangement.Center
         ) {
 
-            // ---------- АНИМАЦИЯ ПОКАЗА/СКРЫТИЯ ЛОГОТИПА ----------
+            // анимация
             AnimatedVisibility(
                 visible = isLogin,
                 enter = fadeIn(tween(300)) + slideInVertically { -80 },
@@ -126,7 +126,7 @@ fun AuthScreen(navController: NavHostController) {
                     )
                 )
             )
-            // ---------- КАРТОЧКА ----------
+            // центральный блок
             Surface(
                 modifier = Modifier
                     .wrapContentHeight()
@@ -143,7 +143,7 @@ fun AuthScreen(navController: NavHostController) {
                     modifier = Modifier.padding(20.dp)
                 ) {
 
-                    // ---------- ЗАГОЛОВОК ----------
+                    // заголовок
                     Text(
                         text = if (isLogin) "Авторизация" else "Регистрация",
                         color = Color(0xFF2139d1
@@ -259,7 +259,7 @@ fun AuthScreen(navController: NavHostController) {
                     )
                 }
             }
-            // 3. **ОБРАБОТКА СОСТОЯНИЯ UI (ОШИБКИ/УСПЕХ)**
+            // обработка состояния
             LaunchedEffect(true) {
                 viewModel.events.collect { event ->
                     when (event) {
@@ -273,25 +273,14 @@ fun AuthScreen(navController: NavHostController) {
                         is AuthEvent.NavigateToError -> {
                             navController.navigate("error/server")
                         }
-                    }
-                }
-            }
-            LaunchedEffect(uiState) {
-                when (val state = uiState) {
 
-                    is AuthUiState.Error -> {
-                        topMessage = state.message
-                        isError = true
-                        isTopMessageVisible = true
-                    }
+                        is AuthEvent.ShowMessage -> {
+                            topMessage = event.message
+                            isError = event.isError
+                            isTopMessageVisible = true
+                        }
 
-                    is AuthUiState.RegistrationSuccess -> {
-                        topMessage = "Регистрация прошла успешно"
-                        isError = false
-                        isTopMessageVisible = true
                     }
-
-                    else -> Unit
                 }
             }
 

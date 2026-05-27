@@ -67,7 +67,7 @@ fun SettingsScreen(navController: NavHostController) {
             .fillMaxSize()
             .background(Color(0xFF111845)),
     ) {
-            // ====== ВЕРХ ======
+            // заголовок
             Text(
                 text = "Настройки",
                 fontSize = 28.sp,
@@ -76,14 +76,14 @@ fun SettingsScreen(navController: NavHostController) {
                     .padding(36.dp)
             )
 
-        // ====== Центр ======
+        // центр
         Column(
             modifier = Modifier
                 .weight(1f)
                 .padding(horizontal = 24.dp),
             verticalArrangement = Arrangement.Center
         ) {
-            // ---------- РАЗРЕШЕНИЕ ----------
+            // разрешение
             SettingDescription(
                 "Разрешение кадра детекции (AR)"
             )
@@ -107,7 +107,7 @@ fun SettingsScreen(navController: NavHostController) {
 
             Spacer(Modifier.height(20.dp))
 
-            // ---------- FPS ----------
+            // фпс
             SettingDescription(
                 "Частота кадров отображения изображения"
             )
@@ -145,7 +145,7 @@ fun SettingsScreen(navController: NavHostController) {
                 onFocusLost = { value ->
                     saveJob?.cancel()
                     saveJob = scope.launch {
-                        delay(300) // даём UI стабилизироваться
+                        delay(300)
 
                         val parsed = value.toFloatOrNull()
                         if (parsed != null) {
@@ -198,7 +198,7 @@ fun SettingsScreen(navController: NavHostController) {
             )
         }
 
-        // ====== КНОПКА ВЫХОДА (НИЗ) ======
+        // кнопка выхода из акка
         OutlinedButton(
             onClick = { showDialog = true },
             modifier = Modifier
@@ -229,7 +229,7 @@ fun SettingsScreen(navController: NavHostController) {
             }
         }
 
-        // ====== ДИАЛОГ ======
+        // диалог
         if (showDialog) {
             AlertDialog(
                 onDismissRequest = { showDialog = false },

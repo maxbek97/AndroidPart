@@ -2,7 +2,6 @@ package com.example.androidpart.ui.components.ar
 
 import android.graphics.Bitmap
 import android.util.Log
-import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -14,11 +13,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import com.example.androidpart.data.local.ModelManager
 import com.example.androidpart.domain.model.ArMarker
 import com.example.androidpart.domain.model.CameraIntrinsics
-import com.example.androidpart.rendering.filament.Eye
-import com.example.androidpart.rendering.filament.FilamentEngine
+import com.example.androidpart.domain.ar.Eye
+import com.example.androidpart.domain.ar.FilamentEngine
 
 @Composable
 fun ArEyeContainer(
@@ -32,19 +30,9 @@ fun ArEyeContainer(
     val actualWidth = frame?.width?.toFloat() ?: calibrationData.calibWidth
     val actualHeight = frame?.height?.toFloat() ?: calibrationData.calibHeight
 
-    // Добавь этот Side Effect для отладки
-    LaunchedEffect(actualWidth, actualHeight, calibrationData.calibWidth, calibrationData.calibHeight) {
-        Log.d("AR_DEBUG_DIMENS", """
-        [EYE: $eye] 
-        Settings (Calib): ${calibrationData.calibWidth}x${calibrationData.calibHeight}
-        Actual Bitmap: ${actualWidth}x${actualHeight}
-        Scale Diff: X:${actualWidth/calibrationData.calibWidth} Y:${actualHeight/calibrationData.calibHeight}
-    """.trimIndent())
-    }
-
     Box(modifier = modifier.fillMaxHeight().background(Color.Blue)) {
 
-        //Слой 0, слой камеры
+        //Слой 1, слой камеры
         frame?.let {
             Image(
                 bitmap = it.asImageBitmap(),
@@ -53,7 +41,7 @@ fun ArEyeContainer(
                 contentScale = ContentScale.Crop
             )
         }
-        // Слой 1: 3D Графика Filament (прозрачный SurfaceView поверх) Он изза него делает черным экран, но при этом детекция работает
+        // Слой 2: 3D Графика Filament
         FilamentView(
             markers = markers,
             engine = engine,
@@ -63,7 +51,7 @@ fun ArEyeContainer(
             calibrationData = calibrationData
         )
 
-        // Слой 2: 2D Текст и рамки (самый верхний)
+        // Слой 3: 2D Текст и рамки
         ArOverlayView(
             modifier = Modifier.fillMaxSize(),
             markers = markers,

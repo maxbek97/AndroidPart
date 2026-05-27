@@ -7,11 +7,10 @@ import kotlin.math.sqrt
 // domain/ar/PoseMapper.kt
 object PoseMapper {
     fun toFilamentMatrix(rvec: List<Double>, tvec: List<Double>): FloatArray {
-        // 1. Превращаем rvec (вектор Родрига) в матрицу вращения 3x3
-        // Для этого обычно используют функцию Rodrigues из OpenCV (через библиотеку или вручную)
+        // матрица вращения <- вектор родрига
         val rotationMatrix = rodriguesToRotationMatrix(rvec)
 
-        // 2. Формируем матрицу 4x4 для Filament (Column-major order)
+        // матрицу 4x4 для Filament из матрицы вращения 3 на 3
         val openCVMatrix = FloatArray(16).apply {
             this[0] = rotationMatrix[0]; this[4] = rotationMatrix[1]; this[8] = rotationMatrix[2];  this[12] = tvec[0].toFloat()
             this[1] = -rotationMatrix[3]; this[5] = -rotationMatrix[4]; this[9] = -rotationMatrix[5];  this[13] = -tvec[1].toFloat()
@@ -23,7 +22,7 @@ object PoseMapper {
         android.opengl.Matrix.rotateM(correctionMatrix, 0, 90f, 1f, 0f, 0f)
 
         val resultMatrix = FloatArray(16)
-        // Важно: умножаем Исходную на Коррекцию, чтобы поворот был локальным для модели
+        // применение локальных преобразований
         android.opengl.Matrix.multiplyMM(resultMatrix, 0, openCVMatrix, 0, correctionMatrix, 0)
 
         return resultMatrix
