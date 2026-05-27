@@ -22,5 +22,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "AndroidPart"
+rootProject.name = "IvanVision"
 include(":app")
+include(":opencv")

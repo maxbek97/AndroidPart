@@ -1,0 +1,96 @@
+package com.example.androidpart.ui.screens.MainScreen
+
+import android.app.Application
+import android.graphics.Bitmap
+import android.util.Log
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.androidpart.data.local.SettingsDataStore
+import com.example.androidpart.data.remote.WsClient
+import com.example.androidpart.data.remote.arJson
+import com.example.androidpart.domain.model.ArMarker
+import com.example.androidpart.domain.model.MarkerResponse
+import com.example.androidpart.domain.model.WsMessage
+import com.example.androidpart.domain.ar.FilamentEngine
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.jsonObject
+
+class MainViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val context = application.applicationContext
+    val settingsDataStore = SettingsDataStore(context)
+    val engine: FilamentEngine by lazy { FilamentEngine(context) }
+
+    val wsClient = WsClient()
+
+    // Состояния для UI
+    private val _markers = MutableStateFlow<List<ArMarker>>(emptyList())
+    val markers: StateFlow<List<ArMarker>> = _markers.asStateFlow()
+
+    private val _currentFrame = MutableStateFlow<Bitmap?>(null)
+    val currentFrame: StateFlow<Bitmap?> = _currentFrame.asStateFlow()
+
+
+    init {
+        initNetworkAndData()
+    }
+
+    private fun initNetworkAndData() {
+        viewModelScope.launch {
+            wsClient.connect { message ->
+                try {
+                    val jsonElement = arJson.parseToJsonElement(message).jsonObject
+
+                    // Сначала проверяем, ЧТО пришло
+                    if (jsonElement.containsKey("markers")) {
+                        val response = arJson.decodeFromString<MarkerResponse>(message)
+                        _markers.value = response.markers
+                    } else if (jsonElement.containsKey("error")) {
+                        Log.e("VM_DEBUG", "Server error message: ${jsonElement["error"]}")
+                    } else {
+                        Log.d("VM_DEBUG", "Other message: $message")
+                    }
+
+                } catch (e: Exception) {
+                    Log.e("VM_DEBUG", "Parse error: ${e.message}")
+                }
+            }
+
+            // получаем калибровку и отправляем INIT
+            try {
+                val calibration = settingsDataStore.calibrationFlow.first()
+                val currentSettings = settingsDataStore.settingsFlow.first()
+                val markerSize = currentSettings.third
+
+                if (calibration != null) {
+                    val initPacket: WsMessage = WsMessage.Init(
+                        camera_matrix = calibration.cameraMatrix,
+                        dist_coeffs = calibration.distCoeffs,
+                        marker_length = markerSize.toDouble()
+
+                    )
+                    val jsonToSend = arJson.encodeToString<WsMessage>(initPacket)
+
+                    wsClient.send(jsonToSend)
+
+                }
+            } catch (e: Exception) {
+                Log.e("VM_DEBUG", "Error during init: ${e.message}")
+            }
+        }
+    }
+
+    fun updateFrame(bitmap: Bitmap) {
+        _currentFrame.value = bitmap
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        wsClient.disconnect()
+    }
+}
