@@ -8,7 +8,7 @@ class AuthRepository(
 
     companion object {
         fun create(sessionManager: SessionManager): AuthRepository {
-            val apiService = AuthRetrofitClient.getApiService(sessionManager)
+            val apiService = AuthInterceptor.AuthRetrofitClient.getApiService(sessionManager)
             return AuthRepository(apiService)
         }
     }

@@ -8,17 +8,25 @@ import okhttp3.OkHttpClient
 import okhttp3.Response
 import okhttp3.logging.HttpLoggingInterceptor
 
-class AuthInterceptor(private val sessionManager: SessionManager) : Interceptor {
+class AuthInterceptor(
+    private val sessionManager: SessionManager
+) : Interceptor {
+
+
     override fun intercept(chain: Interceptor.Chain): Response {
+        val token = sessionManager.getToken()
         val requestBuilder = chain.request().newBuilder()
 
-        sessionManager.getToken()?.let { token ->
-            requestBuilder.addHeader("Authorization", "Bearer $token")
+        token?.let {
+            requestBuilder.addHeader(
+                "Authorization",
+                "Bearer $it"
+            )
         }
 
         return chain.proceed(requestBuilder.build())
     }
-}
+
 
 object AuthRetrofitClient {
     private val logging = HttpLoggingInterceptor().apply {
@@ -39,4 +47,5 @@ object AuthRetrofitClient {
 
         return retrofit.create(AuthApiService::class.java)
     }
+}
 }

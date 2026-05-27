@@ -214,8 +214,6 @@ class FilamentEngine(context: Context) {
 
         // Считаем матрицу
         val markerMatrix = PoseMapper.toFilamentMatrix(marker.rvec!!, marker.tvec!!)
-        markerMatrix[13] = -markerMatrix[13] // Инверсия Y (OpenCV -> Filament)
-        markerMatrix[14] = -markerMatrix[14]
 
         Log.d("AR_POSE_DEBUG", "TVEC: ${marker.tvec}, RVEC: ${marker.rvec}")
         val localMatrix = getLocalTransform(modelData)

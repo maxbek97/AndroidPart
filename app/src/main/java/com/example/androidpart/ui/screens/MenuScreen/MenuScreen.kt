@@ -33,7 +33,7 @@ import com.example.androidpart.ui.components.ModelsLoadingOverlay
 fun MenuScreen(navController: NavHostController) {
     val context = LocalContext.current
 
-    val api = remember { DetectorRetrofitClient.create() }
+    val api = remember { DetectorRetrofitClient.create(context) }
     val repo = remember { DetectorRepository(api) }
     val settings = remember { SettingsDataStore(context) }
 

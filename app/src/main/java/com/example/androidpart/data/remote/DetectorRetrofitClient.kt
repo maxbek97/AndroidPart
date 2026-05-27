@@ -1,5 +1,6 @@
 package com.example.androidpart.data.remote
 
+import android.content.Context
 import android.util.Log
 import okhttp3.OkHttpClient
 import com.example.androidpart.BuildConfig
@@ -11,7 +12,9 @@ import okhttp3.logging.HttpLoggingInterceptor
 object DetectorRetrofitClient {
 
 
-    fun create(): DetectorApiService {
+    fun create(context: Context): DetectorApiService {
+
+        val sessionManager = SessionManager(context)
 
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
@@ -19,9 +22,7 @@ object DetectorRetrofitClient {
 
 
         val client = OkHttpClient.Builder()
-            .addInterceptor(HttpLoggingInterceptor().apply {
-                level = HttpLoggingInterceptor.Level.BODY
-            })
+            .addInterceptor(AuthInterceptor(sessionManager))
             .addInterceptor(logging)
             .build()
 
