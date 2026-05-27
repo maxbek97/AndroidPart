@@ -18,7 +18,7 @@ fun parseStringMatrix(input: String): List<List<Double>> {
 
 fun parseStringList(str: String): List<Double> {
     return try {
-        // Регулярка [;,\\s]+ разделит и по запятой, и по точке с запятой, и по пробелу
+        // Разделение по запятой, по точке с запятой и по пробелу
         str.replace("[", "").replace("]", "")
             .split(Regex("[;,\\s]+"))
             .filter { it.isNotBlank() }

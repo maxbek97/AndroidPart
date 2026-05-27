@@ -28,6 +28,7 @@ import com.example.androidpart.data.remote.DetectorRetrofitClient
 import com.example.androidpart.data.remote.SessionManager
 import com.example.androidpart.ui.components.MenuButton
 import com.example.androidpart.ui.components.ModelsLoadingOverlay
+import com.example.androidpart.ui.components.TopMessageBar
 
 @Composable
 fun MenuScreen(navController: NavHostController) {
@@ -39,7 +40,7 @@ fun MenuScreen(navController: NavHostController) {
 
     val viewModel = remember {
         val manager = ModelManager(repo, context, settings)
-        MenuViewModel(manager)
+        MenuViewModel(manager, settings)
     }
     val sessionManager = remember { SessionManager(context) }
 
@@ -92,5 +93,14 @@ fun MenuScreen(navController: NavHostController) {
         if (viewModel.isLoading) {
             ModelsLoadingOverlay(progress = viewModel.progress)
         }
+        TopMessageBar(
+            message = viewModel.error ?: "",
+            isError = true,
+            visible = viewModel.error != null,
+            onAutoHide = {
+                viewModel.clearError()
+            },
+            modifier = Modifier.align(Alignment.TopCenter)
+        )
     }
 }
