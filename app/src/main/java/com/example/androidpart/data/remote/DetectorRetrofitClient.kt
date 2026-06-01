@@ -13,6 +13,8 @@ object DetectorRetrofitClient {
     fun create(context: Context): DetectorApiService {
 
         val sessionManager = SessionManager(context)
+        val authRepository =
+            AuthRepository.create(sessionManager)
 
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
@@ -21,6 +23,12 @@ object DetectorRetrofitClient {
 
         val client = OkHttpClient.Builder()
             .addInterceptor(AuthInterceptor(sessionManager))
+            .authenticator(
+                TokenAuthenticator(
+                    sessionManager,
+                    authRepository
+                )
+            )
             .addInterceptor(logging)
             .build()
 

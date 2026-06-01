@@ -19,4 +19,9 @@ interface AuthApiService {
         @Body body: LoginRequest
     ): Response<LoginResponse>
 
+    @POST("auth/refresh")
+    suspend fun refresh(
+        @Body body: RefreshRequest
+    ): Response<RefreshResponse>
+
 }

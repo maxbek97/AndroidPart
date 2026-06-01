@@ -40,4 +40,17 @@ class AuthRepository(
         } catch (e: Exception) {
             Result.failure(e)
         }
+
+    suspend fun refresh(dto: RefreshRequest): Result<RefreshResponse> =
+        try {
+            val response = api.refresh(dto)
+
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(Exception(response.errorBody()?.string() ?: "Ошибка авторизации"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
 }

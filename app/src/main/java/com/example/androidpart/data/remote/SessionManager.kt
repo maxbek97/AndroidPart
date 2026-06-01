@@ -4,17 +4,37 @@ import android.content.Context
 
 class SessionManager(context: Context) {
 
-    private val prefs = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
+    private val prefs =
+        context.getSharedPreferences(
+            "auth_prefs",
+            Context.MODE_PRIVATE
+        )
 
-    fun saveToken(token: String) {
-        prefs.edit().putString("access_token", token).apply()
+    fun saveAccessToken(token: String) {
+        prefs.edit()
+            .putString("access_token", token)
+            .apply()
     }
 
-    fun getToken(): String? = prefs.getString("access_token", null)
+    fun getAccessToken(): String? =
+        prefs.getString("access_token", null)
+
+    fun saveRefreshToken(token: String) {
+        prefs.edit()
+            .putString("refresh_token", token)
+            .apply()
+    }
+
+    fun getRefreshToken(): String? =
+        prefs.getString("refresh_token", null)
 
     fun clearSession() {
-        prefs.edit().remove("access_token").apply()
+        prefs.edit()
+            .remove("access_token")
+            .remove("refresh_token")
+            .apply()
     }
 
-    fun isAuthorized(): Boolean = getToken() != null
+    fun isAuthorized(): Boolean =
+        getAccessToken() != null
 }

@@ -144,7 +144,10 @@ class AuthViewModel(
             authRepository.login(LoginRequest(email, password))
                 .onSuccess { response ->
                     _uiState.value = AuthUiState.Idle
-                    sessionManager.saveToken(response.accessToken)
+                    sessionManager.saveAccessToken(response.accessToken)
+                    sessionManager.saveRefreshToken(response.refreshToken)
+//                    sessionManager.saveRefreshToken("abracadabra Да, я люблю леди гагу")
+
                     _events.emit(
                         AuthEvent.ShowMessage(
                             "Добро пожаловать",

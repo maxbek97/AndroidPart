@@ -14,11 +14,11 @@ class AuthInterceptor(
 
 
     override fun intercept(chain: Interceptor.Chain): Response {
-        val token = sessionManager.getToken()
+        val token = sessionManager.getAccessToken()
         val requestBuilder = chain.request().newBuilder()
 
         token?.let {
-            requestBuilder.addHeader(
+            requestBuilder.header(
                 "Authorization",
                 "Bearer $it"
             )
